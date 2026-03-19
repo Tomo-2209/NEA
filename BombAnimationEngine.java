@@ -63,12 +63,17 @@ public class BombAnimationEngine
 	}
 	
 	/**
-	 * Draw the bomb in pre-explosion state
+	 * Draw the bomb in pre-explosion state, scaled to fit the component dimensions.
 	 */
-	public void drawBomb(Graphics2D g2d)
+	public void drawBomb(Graphics2D g2d, int w, int h)
 	{
 		// Save the graphics state
 		AffineTransform originalTransform = g2d.getTransform();
+		
+		// Scale so the logical 300x300 canvas fits centred inside the component
+		double scale = Math.min(w, h) / 300.0;
+		g2d.translate(w / 2.0 - 150.0 * scale, h / 2.0 - 150.0 * scale);
+		g2d.scale(scale, scale);
 		
 		// 1. Tilt the bomb
 		g2d.rotate(Math.toRadians(25), 150, 150);
@@ -98,14 +103,15 @@ public class BombAnimationEngine
 	
 	/**
 	 * Draw the fuse rope that burns down as time progresses.
-	 * The spark follows the bezier curve path.
+	 * The spark follows the quadratic bezier path defined by
+	 * P0=(150,88), P1=(70,110), P2=(60,40).
 	 */
 	private void drawFuse(Graphics2D g2d)
 	{
-		// Define the fuse bezier path
+		// Define the fuse path as a quadratic bezier (matches getPointOnCurve)
 		Path2D fusePath = new Path2D.Double();
 		fusePath.moveTo(150, 88);
-		fusePath.curveTo(150, 30, 70, 110, 60, 40);
+		fusePath.quadTo(70, 110, 60, 40);
 		
 		// Draw the full fuse path (unburned)
 		g2d.setStroke(new BasicStroke(6, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
@@ -160,15 +166,27 @@ public class BombAnimationEngine
 	}
 	
 	/**
-	 * Draw the explosion particles after detonation
+	 * Draw the explosion particles after detonation, scaled to fit the component.
 	 */
-	public void drawExplosion(Graphics2D g2d)
+	public void drawExplosion(Graphics2D g2d, int w, int h)
 	{
+		AffineTransform originalTransform = g2d.getTransform();
+		
+		// Same scale/translate as drawBomb so particles originate from the bomb centre
+		double scale = Math.min(w, h) / 300.0;
+		g2d.translate(w / 2.0 - 150.0 * scale, h / 2.0 - 150.0 * scale);
+		g2d.scale(scale, scale);
+		
 		for (Particle p : particles)
 		{
-			g2d.setColor(p.color);
-			g2d.fillOval((int)p.x, (int)p.y, p.size, p.size);
+			if (p.size > 0)
+			{
+				g2d.setColor(p.color);
+				g2d.fillOval((int)p.x - p.size / 2, (int)p.y - p.size / 2, p.size, p.size);
+			}
 		}
+		
+		g2d.setTransform(originalTransform);
 	}
 	
 	/**
@@ -205,6 +223,26 @@ public class BombAnimationEngine
 	public boolean hasExploded()
 	{
 		return exploded;
+	}
+	
+	/**
+	 * Check if the full explosion animation (fuse + particles) has finished.
+	 * Returns true once all particles have faded out.
+	 */
+	public boolean isAnimationComplete()
+	{
+		if (!exploded || particles.isEmpty())
+		{
+			return false;
+		}
+		for (Particle p : particles)
+		{
+			if (p.size > 0)
+			{
+				return false;
+			}
+		}
+		return true;
 	}
 	
 	/**

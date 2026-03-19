@@ -11,7 +11,6 @@ import javax.swing.Timer;
  */
 public class BombTile extends Tile
 {
-	private static final String HIDDEN_SYMBOL = "?";
 	private GamePanel gamePanel;
 	private boolean isActivated;
 	private Timer animationTimer;
@@ -33,10 +32,10 @@ public class BombTile extends Tile
 	{
 		if (isHidden && !isActivated)
 		{
-			// Hidden bomb - just show ?
-			setText(HIDDEN_SYMBOL);
+			// Hidden bomb - looks like a regular empty tile so its position stays secret
+			setText("");
 			setBackground(Color.darkGray);
-			setForeground(Color.cyan);
+			setForeground(Color.white);
 		}
 		else if (isActivated)
 		{
@@ -71,32 +70,24 @@ public class BombTile extends Tile
 	 */
 	private void startAnimation()
 	{
-		// Animation timer: 60 FPS
+		// Animation timer: ~60 FPS
 		animationTimer = new Timer(16, e -> {
 			animationEngine.update();
 			repaint();
 			
-			// When explosion occurs, clear the surrounding area after a brief delay
-			if (animationEngine.hasExploded())
+			// Stop once the full explosion animation (particles) has finished
+			if (animationEngine.isAnimationComplete())
 			{
 				animationTimer.stop();
-				clearSurroundingAreaWithDelay();
+				// Clear the bomb tile's own visual and surrounding tiles
+				isActivated = false;
+				setText("");
+				setBackground(Color.darkGray);
+				repaint();
+				clearSurroundingArea();
 			}
 		});
 		animationTimer.start();
-	}
-	
-	/**
-	 * Clear the 3x3 area with a small delay after explosion
-	 */
-	private void clearSurroundingAreaWithDelay()
-	{
-		Timer delayTimer = new Timer(300, e -> {
-			clearSurroundingArea();
-			((Timer) e.getSource()).stop();
-		});
-		delayTimer.setRepeats(false);
-		delayTimer.start();
 	}
 	
 	/**
@@ -139,14 +130,17 @@ public class BombTile extends Tile
 			g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 			g2d.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
 			
+			int w = getWidth();
+			int h = getHeight();
+			
 			// Determine what to draw based on animation state
 			if (!animationEngine.hasExploded())
 			{
-				animationEngine.drawBomb(g2d);
+				animationEngine.drawBomb(g2d, w, h);
 			}
 			else
 			{
-				animationEngine.drawExplosion(g2d);
+				animationEngine.drawExplosion(g2d, w, h);
 			}
 		}
 	}
