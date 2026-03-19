@@ -93,6 +93,22 @@ public class GameModel
 		movesMade = 0;
 	}
 	
+	/**
+	 * Clear a single cell (e.g. after a bomb explosion), resetting it to empty
+	 * and decrementing the move counter so tie detection stays accurate.
+	 */
+	public void clearCell(int row, int col)
+	{
+		if (row >= 0 && row < gridSize && col >= 0 && col < gridSize)
+		{
+			if (!board[row][col].isEmpty())
+			{
+				board[row][col] = Symbols.EMPTY;
+				movesMade = Math.max(0, movesMade - 1);
+			}
+		}
+	}
+	
 	public WinResult checkForWin()
 	{
 		for (int r = 0; r < gridSize; r++)

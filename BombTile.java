@@ -75,44 +75,17 @@ public class BombTile extends Tile
 			animationEngine.update();
 			repaint();
 			
-			// Stop once the full explosion animation (particles) has finished
+			// Once the full explosion animation (fuse + particles) has finished,
+			// delegate cleanup to the panel so the tile can be replaced and the
+			// surrounding area cleared in both the view and the model.
 			if (animationEngine.isAnimationComplete())
 			{
 				animationTimer.stop();
-				// Clear the bomb tile's own visual and surrounding tiles
 				isActivated = false;
-				setText("");
-				setBackground(Color.darkGray);
-				repaint();
-				clearSurroundingArea();
+				gamePanel.onBombExploded(row, col);
 			}
 		});
 		animationTimer.start();
-	}
-	
-	/**
-	 * Clear all symbols in the 3x3 area surrounding this bomb
-	 */
-	private void clearSurroundingArea()
-	{
-		// Define the 3x3 area around the bomb
-		for (int r = row - 1; r <= row + 1; r++)
-		{
-			for (int c = col - 1; c <= col + 1; c++)
-			{
-				// Skip if out of bounds
-				if (r < 0 || c < 0 || r >= gamePanel.getGridSize() || c >= gamePanel.getGridSize())
-				{
-					continue;
-				}
-				
-				// Don't clear the bomb itself, but clear everything else
-				if (r != row || c != col)
-				{
-					gamePanel.clearTile(r, c);
-				}
-			}
-		}
 	}
 	
 	/**

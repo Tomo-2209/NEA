@@ -3,6 +3,7 @@ import java.awt.GridLayout;
 import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.JPanel;
@@ -13,6 +14,8 @@ public class GamePanel extends JPanel
 	private int gridSize;
 	private GameController controller;
 	private BombManager bombManager;
+	private WinFlashAnimation winFlash;
+	private int currentFontSize = 48;
 	
 	public GamePanel(GameController controller, int gridSize)
 	{
@@ -101,7 +104,7 @@ public class GamePanel extends JPanel
 	}
 	
 	/**
-	 * Clear a tile (remove any symbol from it)
+	 * Clear a tile visually and in the model (used externally if needed).
 	 */
 	public void clearTile(int row, int col)
 	{
@@ -110,15 +113,133 @@ public class GamePanel extends JPanel
 			if (board[row][col] instanceof StandardTile)
 			{
 				((StandardTile) board[row][col]).reset();
+				clearCellInModel(row, col);
 			}
 		}
 	}
 	
-	public void highlightCells(List<Point> cells)
+	/**
+	 * Clear a single cell in the model via the controller, guarding against a null controller.
+	 */
+	private void clearCellInModel(int row, int col)
 	{
+		if (controller != null)
+		{
+			controller.clearCell(row, col);
+		}
+	}
+	
+	/**
+	 * Start a flashing highlight animation on the winning tiles.
+	 * Any previous flash animation is stopped first.
+	 */
+	public void flashWinningCells(List<Point> cells)
+	{
+		stopWinFlash();
+		List<Tile> winTiles = new ArrayList<>();
 		for (Point p : cells)
 		{
-			board[p.x][p.y].setBackground(Color.lightGray);
+			winTiles.add(board[p.x][p.y]);
+		}
+		winFlash = new WinFlashAnimation(winTiles);
+		winFlash.start();
+	}
+	
+	/**
+	 * Stop the win-flash animation if one is running.
+	 */
+	private void stopWinFlash()
+	{
+		if (winFlash != null)
+		{
+			winFlash.stop();
+			winFlash = null;
+		}
+	}
+	
+	/**
+	 * Called by a BombTile when its explosion animation finishes.
+	 * Clears the 3×3 area around the bomb in both the view and the model,
+	 * then converts the bomb tile itself into a playable StandardTile so
+	 * players can place symbols on it again.
+	 */
+	public void onBombExploded(int bombRow, int bombCol)
+	{
+		for (int r = bombRow - 1; r <= bombRow + 1; r++)
+		{
+			for (int c = bombCol - 1; c <= bombCol + 1; c++)
+			{
+				if (r < 0 || c < 0 || r >= gridSize || c >= gridSize)
+				{
+					continue;
+				}
+				
+				if (r == bombRow && c == bombCol)
+				{
+					// Replace the bomb tile with a playable standard tile
+					convertToStandardTile(r, c);
+				}
+				else if (board[r][c] instanceof BombTile)
+				{
+					// A neighbouring bomb was also in the blast radius — convert it
+					convertToStandardTile(r, c);
+				}
+				else if (board[r][c] instanceof StandardTile)
+				{
+					// Clear the symbol in the view and in the model
+					((StandardTile) board[r][c]).reset();
+					clearCellInModel(r, c);
+				}
+			}
+		}
+	}
+	
+	/**
+	 * Replace the tile at (row, col) with a fresh, empty StandardTile.
+	 * The new tile gets the current font size and an action listener so it
+	 * behaves identically to any other standard tile on the board.
+	 */
+	private void convertToStandardTile(int row, int col)
+	{
+		Tile oldTile = board[row][col];
+		int index = row * gridSize + col;
+		
+		remove(oldTile);
+		
+		StandardTile newTile = new StandardTile(row, col);
+		newTile.setFontSize(currentFontSize);
+		newTile.addActionListener(e -> {
+			if (controller != null)
+			{
+				handleTileClick(newTile);
+			}
+		});
+		
+		board[row][col] = newTile;
+		add(newTile, index);
+		revalidate();
+		repaint();
+	}
+	
+	/**
+	 * Stop all active bomb animations before the grid is torn down.
+	 * Prevents a stale timer callback from modifying the new grid.
+	 */
+	private void stopAllBombAnimations()
+	{
+		if (board == null)
+		{
+			return;
+		}
+		for (int r = 0; r < gridSize; r++)
+		{
+			for (int c = 0; c < gridSize; c++)
+			{
+				if (board[r][c] instanceof BombTile)
+				{
+					((BombTile) board[r][c]).reset();
+				}
+			}
 		}
 	}
 	
@@ -129,6 +250,8 @@ public class GamePanel extends JPanel
 	
 	public void reset(int newGridSize)
 	{
+		stopWinFlash();
+		stopAllBombAnimations();
 		this.gridSize = newGridSize;
 		bombManager.reset(newGridSize);
 		initialiseGrid(newGridSize);
@@ -140,13 +263,13 @@ public class GamePanel extends JPanel
 		int tileWidth = getWidth() / Math.max(1, gridSize);
 		int tileHeight = getHeight() / Math.max(1, gridSize);
 		int tileSize = Math.min(tileWidth, tileHeight);
-		int fontSize = Math.max(12, tileSize / 2);
+		currentFontSize = Math.max(12, tileSize / 2);
 		
 		for (int r = 0; r < gridSize; r++)
 		{
 			for (int c = 0; c < gridSize; c++)
 			{
-				board[r][c].setFontSize(fontSize);
+				board[r][c].setFontSize(currentFontSize);
 			}
 		}
 	}

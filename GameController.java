@@ -78,7 +78,7 @@ public class GameController
 			String winnerSymbol = result.getWinnerSymbol();
 			Player winner = winnerSymbol.equals(playerX.getSymbol()) ? playerX : playerO;
 			winner.incrementScore();
-			panel.highlightCells(result.getWinningCells());
+			panel.flashWinningCells(result.getWinningCells());
 			ui.updateScoreDisplay(playerX, playerO);
 			ui.updateTurnLabel(winner.getName() + " wins!");
 		}
@@ -115,6 +115,14 @@ public class GameController
 	private void switchPlayer()
 	{
 		currentPlayer = currentPlayer == playerX ? playerO : playerX;
+	}
+	
+	/**
+	 * Clear a single cell in the model (called after a bomb clears surrounding tiles).
+	 */
+	public void clearCell(int row, int col)
+	{
+		model.clearCell(row, col);
 	}
 	
 	public Player getPlayerX() 
