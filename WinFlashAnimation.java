@@ -10,7 +10,7 @@ import javax.swing.Timer;
 public class WinFlashAnimation
 {
 	private static final Color HIGHLIGHT_COLOR = new Color(255, 215, 0); // Gold
-	private static final Color NORMAL_COLOR = Color.darkGray;
+	private static final Color NORMAL_COLOR = Color.white;
 	private static final int FLASH_INTERVAL_MS = 400;
 
 	private final List<Tile> tiles;

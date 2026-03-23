@@ -19,8 +19,8 @@ public class StandardTile extends Tile
 	public void draw()
 	{
 		setText(symbol);
-		setBackground(Color.darkGray);
-		setForeground(Color.white);
+		setBackground(Color.white);
+		setForeground(Color.black);
 	}
 	
 	@Override

@@ -34,8 +34,8 @@ public class BombTile extends Tile
 		{
 			// Hidden bomb - looks like a regular empty tile so its position stays secret
 			setText("");
-			setBackground(Color.darkGray);
-			setForeground(Color.white);
+			setBackground(Color.white);
+			setForeground(Color.black);
 		}
 		else if (isActivated)
 		{

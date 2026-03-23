@@ -20,8 +20,8 @@ public abstract class Tile extends JButton
 		this.isHidden = false;
 		
 		// Common styling for all tiles
-		setBackground(Color.darkGray);
-		setForeground(Color.yellow); // Changed from white for better visibility
+		setBackground(Color.white);
+		setForeground(Color.black);
 		setFont(new Font("Arial", Font.BOLD, 48));
 		setFocusable(false);
 		
