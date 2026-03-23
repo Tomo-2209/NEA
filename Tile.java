@@ -1,5 +1,6 @@
 import java.awt.Color;
 import java.awt.Font;
+import java.awt.Graphics;
 import javax.swing.JButton;
 
 /**
@@ -23,6 +24,26 @@ public abstract class Tile extends JButton
 		setForeground(Color.yellow); // Changed from white for better visibility
 		setFont(new Font("Arial", Font.BOLD, 48));
 		setFocusable(false);
+		
+		// Ensure setBackground() is always visually honoured, regardless of L&F.
+		// We fill the background ourselves in paintComponent, so the L&F must not
+		// paint its own content area on top of our colour.
+		setOpaque(true);
+		setContentAreaFilled(false);
+		setBorderPainted(false);
+	}
+	
+	/**
+	 * Explicitly fill the background colour before delegating to the L&F painter.
+	 * This guarantees that calls to setBackground() (e.g. from WinFlashAnimation)
+	 * are always visible on screen, regardless of which Look & Feel is active.
+	 */
+	@Override
+	protected void paintComponent(Graphics g)
+	{
+		g.setColor(getBackground());
+		g.fillRect(0, 0, getWidth(), getHeight());
+		super.paintComponent(g);
 	}
 	
 	/**

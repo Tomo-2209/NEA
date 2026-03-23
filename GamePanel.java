@@ -75,10 +75,39 @@ public class GamePanel extends JPanel
 	}
 	
 	/**
+	 * Returns true while any bomb on the board is currently animating (fuse or explosion).
+	 * All tile clicks are blocked during this period.
+	 */
+	public boolean isBombDetonating()
+	{
+		if (board == null)
+		{
+			return false;
+		}
+		for (int r = 0; r < gridSize; r++)
+		{
+			for (int c = 0; c < gridSize; c++)
+			{
+				if (board[r][c] instanceof BombTile && ((BombTile) board[r][c]).isActivated())
+				{
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	/**
 	 * Handle tile click - dispatch to appropriate tile type handler
 	 */
 	private void handleTileClick(Tile tile)
 	{
+		// Block all input while a bomb animation is running
+		if (isBombDetonating())
+		{
+			return;
+		}
+
 		if (tile instanceof BombTile)
 		{
 			BombTile bomb = (BombTile) tile;
@@ -162,6 +191,7 @@ public class GamePanel extends JPanel
 	 * Clears the 3×3 area around the bomb in both the view and the model,
 	 * then converts the bomb tile itself into a playable StandardTile so
 	 * players can place symbols on it again.
+	 * Finally notifies the controller so it can switch the active player.
 	 */
 	public void onBombExploded(int bombRow, int bombCol)
 	{
@@ -191,6 +221,12 @@ public class GamePanel extends JPanel
 					clearCellInModel(r, c);
 				}
 			}
+		}
+		
+		// Now that the animation has fully finished, hand control back to the controller
+		if (controller != null)
+		{
+			controller.onBombAnimationFinished();
 		}
 	}
 	

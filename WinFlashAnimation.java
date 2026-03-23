@@ -35,6 +35,7 @@ public class WinFlashAnimation
 		for (Tile t : tiles)
 		{
 			t.setBackground(c);
+			t.repaint();
 		}
 	}
 

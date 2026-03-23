@@ -95,8 +95,9 @@ public class GameController
 	}
 	
 	/**
-	 * Handle click on a bomb tile
-	 * The bomb clears its surrounding 3x3 area and ends the current turn
+	 * Handle click on a bomb tile.
+	 * The turn does NOT switch here; it switches only once the explosion
+	 * animation has fully finished (see onBombAnimationFinished).
 	 */
 	public void handleBombClick(int row, int col)
 	{
@@ -104,12 +105,22 @@ public class GameController
 		{
 			return;
 		}
-		
-		// Bomb activates and clears surrounding area
-		// This is handled in BombTile.onClick()
-		// Switch to next player's turn
-		switchPlayer();
-		ui.updateTurnLabel(currentPlayer.getName() + "'s turn (Bomb cleared nearby tiles!)");
+		// Intentionally do nothing else here.
+		// onBombAnimationFinished() will be called by GamePanel when the animation ends.
+	}
+	
+	/**
+	 * Called by GamePanel after the bomb explosion animation has fully finished
+	 * and the blast area has been cleared.
+	 * Switches the active player and updates the turn label.
+	 */
+	public void onBombAnimationFinished()
+	{
+		if (!gameOver)
+		{
+			switchPlayer();
+			ui.updateTurnLabel(currentPlayer.getName() + "'s turn");
+		}
 	}
 	
 	private void switchPlayer()
