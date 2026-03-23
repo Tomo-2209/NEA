@@ -136,6 +136,11 @@ public class GameController
 		model.clearCell(row, col);
 	}
 	
+	public boolean isGameOver()
+	{
+		return gameOver;
+	}
+
 	public Player getPlayerX() 
 	{
 		return playerX;

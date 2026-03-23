@@ -41,7 +41,7 @@ public class BombTile extends Tile
 		{
 			// Activated - custom graphics will be drawn in paintComponent
 			setText(""); // Clear text, we'll draw the bomb graphically
-			setBackground(Color.darkGray);
+			setBackground(Color.white);
 		}
 	}
 	

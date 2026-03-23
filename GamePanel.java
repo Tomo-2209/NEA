@@ -111,6 +111,11 @@ public class GamePanel extends JPanel
 		if (tile instanceof BombTile)
 		{
 			BombTile bomb = (BombTile) tile;
+			// Do not activate a bomb once the game has been won
+			if (controller.isGameOver())
+			{
+				return;
+			}
 			bomb.onClick();
 			controller.handleBombClick(bomb.getRow(), bomb.getCol());
 		}
