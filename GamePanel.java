@@ -34,7 +34,7 @@ public class GamePanel extends JPanel
 	private void initialiseGrid(int gridSize)
 	{
 		removeAll();
-		setLayout(new GridLayout(gridSize, gridSize));
+		setLayout(new GridLayout(gridSize, gridSize, 4, 4));
 		board = new Tile[gridSize][gridSize];
 		
 		for (int r = 0; r < gridSize; r++)
