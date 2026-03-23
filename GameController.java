@@ -10,12 +10,15 @@ public class GameController
 	private Player playerO;
 	private Player currentPlayer;
 	private boolean gameOver = false;
+
+	private final MathQuestionBank questionBank;
 	
-	public GameController(GameModel model, GamePanel panel, TicTacToeUI ui, String player1Name, String player2Name)
+	public GameController(GameModel model, GamePanel panel, TicTacToeUI ui, String player1Name, String player2Name, MathDifficulty difficulty)
 	{
 		this.model = model;
 		this.panel = panel;
 		this.ui = ui;
+		this.questionBank = new MathQuestionBank(difficulty);
 		
 		this.playerX = new Player(player1Name, "X");
 		this.playerO = new Player(player2Name, "O");
@@ -55,7 +58,10 @@ public class GameController
 	}
 	
 	/**
-	 * Handle click on a standard tile (standard game logic)
+	 * Handle click on a standard tile.
+	 * The current player must first answer a maths question.
+	 * Correct answer  → green flash then symbol is placed.
+	 * Wrong answer    → red flash (showing the correct answer), then turn switches.
 	 */
 	public void handleTileClick(int row, int col)
 	{
@@ -64,13 +70,37 @@ public class GameController
 			return;
 		}
 		
+		// The cell must be empty before we bother showing the question
+		if (!model.isCellEmpty(row, col))
+		{
+			return;
+		}
+
+		// ── Maths challenge ───────────────────────────────────────────────
+		MathQuestion question = questionBank.getRandomQuestion();
+		boolean correct = MathQuestionDialog.showQuestion(question, panel);
+
+		if (!correct)
+		{
+			// Wrong answer: flash red, show correct answer, then switch player
+			final String answer = question.getPrimaryAnswer();
+			panel.flashTileIncorrect(row, col, answer, () ->
+			{
+				switchPlayer();
+				ui.updateTurnLabel(currentPlayer.getName() + "'s turn");
+			});
+			return;
+		}
+
+		// ── Correct answer: make the move ─────────────────────────────────
 		if (!model.makeMove(row, col, currentPlayer.getSymbol()))
 		{
 			return;
 		}
-		
+
 		panel.updateTile(row, col, currentPlayer.getSymbol());
-		
+		panel.flashTileCorrect(row, col);
+
 		WinResult result = model.checkForWin();
 		if (result.hasWinner())
 		{

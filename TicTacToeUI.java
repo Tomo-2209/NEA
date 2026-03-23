@@ -23,7 +23,22 @@ public class TicTacToeUI
 	public TicTacToeUI(JFrame frame)
 	{
 		this.frame = frame;
-		
+
+		// ── 1. Difficulty selection ───────────────────────────────────────
+		String[] options = {"GCSE", "A-Level"};
+		int choice = JOptionPane.showOptionDialog(
+			frame,
+			"Select the difficulty level for maths questions:",
+			"Tic-Tac-Total \u2013 Difficulty",
+			JOptionPane.DEFAULT_OPTION,
+			JOptionPane.QUESTION_MESSAGE,
+			null,
+			options,
+			options[0]);
+
+		MathDifficulty difficulty = (choice == 1) ? MathDifficulty.A_LEVEL : MathDifficulty.GCSE;
+
+		// ── 2. Player names ───────────────────────────────────────────────
 		String player1Name = JOptionPane.showInputDialog(frame, "Enter name for Player 1 (X):");
 		if (player1Name == null || player1Name.isEmpty())
 		{
@@ -47,7 +62,7 @@ public class TicTacToeUI
          
          model = new GameModel(3);
          gamePanel = new GamePanel(null, model.getGridSize());
-         controller = new GameController(model, gamePanel, this, player1Name, player2Name);
+         controller = new GameController(model, gamePanel, this, player1Name, player2Name, difficulty);
          
          frame.add(gamePanel, BorderLayout.CENTER);
          

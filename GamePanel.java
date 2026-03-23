@@ -16,6 +16,13 @@ public class GamePanel extends JPanel
 	private BombManager bombManager;
 	private WinFlashAnimation winFlash;
 	private int currentFontSize = 48;
+	/** True while a correct/incorrect flash animation is running; blocks new tile clicks. */
+	private boolean flashBlocked = false;
+
+	private static final int CORRECT_FLASH_DURATION_MS   = 600;
+	private static final int INCORRECT_FLASH_DURATION_MS = 1500;
+	/** Scale factor applied to the tile font during an incorrect-answer flash. */
+	private static final float INCORRECT_ANSWER_FONT_SCALE = 0.6f;
 	
 	public GamePanel(GameController controller, int gridSize)
 	{
@@ -102,8 +109,8 @@ public class GamePanel extends JPanel
 	 */
 	private void handleTileClick(Tile tile)
 	{
-		// Block all input while a bomb animation is running
-		if (isBombDetonating())
+		// Block all input while a bomb animation or answer flash is running
+		if (isBombDetonating() || flashBlocked)
 		{
 			return;
 		}
@@ -126,6 +133,55 @@ public class GamePanel extends JPanel
 		}
 	}
 	
+	/**
+	 * Flash a tile green for 600 ms to indicate a correct answer, then restore it.
+	 * The symbol has already been placed, so restoring the background to white
+	 * leaves the symbol text visible.
+	 */
+	public void flashTileCorrect(int row, int col)
+	{
+		if (row < 0 || row >= gridSize || col < 0 || col >= gridSize) return;
+		Tile tile = board[row][col];
+		flashBlocked = true;
+		tile.setBackground(new Color(100, 220, 100));
+		tile.repaint();
+		javax.swing.Timer t = new javax.swing.Timer(CORRECT_FLASH_DURATION_MS, e ->
+		{
+			tile.setBackground(Color.white);
+			tile.repaint();
+			flashBlocked = false;
+		});
+		t.setRepeats(false);
+		t.start();
+	}
+
+	/**
+	 * Flash a tile red for 1.5 s, temporarily displaying the correct answer,
+	 * then restore the tile and invoke {@code onComplete} (on the EDT).
+	 * Used when a player answers the maths question incorrectly.
+	 */
+	public void flashTileIncorrect(int row, int col, String correctAnswer, Runnable onComplete)
+	{
+		if (row < 0 || row >= gridSize || col < 0 || col >= gridSize) return;
+		Tile tile = board[row][col];
+		flashBlocked = true;
+		tile.setBackground(new Color(240, 80, 80));
+		tile.setText("= " + correctAnswer);
+		tile.setFont(tile.getFont().deriveFont(java.awt.Font.BOLD, Math.max(12, currentFontSize * INCORRECT_ANSWER_FONT_SCALE)));
+		tile.repaint();
+		javax.swing.Timer t = new javax.swing.Timer(INCORRECT_FLASH_DURATION_MS, e ->
+		{
+			tile.setBackground(Color.white);
+			tile.setText("");
+			tile.setFontSize(currentFontSize);
+			tile.repaint();
+			flashBlocked = false;
+			if (onComplete != null) onComplete.run();
+		});
+		t.setRepeats(false);
+		t.start();
+	}
+
 	/**
 	 * Update a standard tile with a player symbol
 	 */
@@ -293,6 +349,7 @@ public class GamePanel extends JPanel
 	{
 		stopWinFlash();
 		stopAllBombAnimations();
+		flashBlocked = false;
 		this.gridSize = newGridSize;
 		bombManager.reset(newGridSize);
 		initialiseGrid(newGridSize);

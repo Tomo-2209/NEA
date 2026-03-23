@@ -68,6 +68,15 @@ public class GameModel
 		return board[row][col];
 	}
 	
+	public boolean isCellEmpty(int row, int col)
+	{
+		if (row < 0 || row >= gridSize || col < 0 || col >= gridSize)
+		{
+			return false;
+		}
+		return board[row][col].isEmpty();
+	}
+
 	public boolean makeMove(int row, int col, String symbol)
 	{
 		Objects.requireNonNull(symbol);
