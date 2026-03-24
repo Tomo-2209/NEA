@@ -30,15 +30,18 @@ public class GameModel
 		{
 			winLength = 3;
 		}
-		
 		else if (gridSize == 5 || gridSize == 6)
 		{
 			winLength = 4;
 		}
-		
-		else
+		else if (gridSize == 7 || gridSize == 8)
 		{
 			winLength = 5;
+		}
+		else
+		{
+			// 9 or 10
+			winLength = 6;
 		}
 	}
 	

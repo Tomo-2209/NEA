@@ -134,4 +134,30 @@ public class BombTile extends Tile
 		animationEngine.reset();
 		draw();
 	}
+	
+	/**
+	 * Stop the animation without triggering an explosion – used when the bomb is diffused.
+	 * The tile appearance is restored to a plain empty state ready for conversion.
+	 */
+	public void stopAnimation()
+	{
+		if (animationTimer != null)
+		{
+			animationTimer.stop();
+			animationTimer = null;
+		}
+		isActivated = false;
+		animationEngine.reset();
+		draw();
+	}
+	
+	/**
+	 * Skip the remaining fuse burn and immediately jump to the explosion state.
+	 * The existing animation timer will detect completion and call onBombExploded.
+	 */
+	public void triggerExplosion()
+	{
+		animationEngine.triggerExplosion();
+		repaint();
+	}
 }

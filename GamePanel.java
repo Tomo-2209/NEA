@@ -1,4 +1,5 @@
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.Point;
 import java.awt.event.ActionEvent;
@@ -21,8 +22,8 @@ public class GamePanel extends JPanel
 
 	private static final int CORRECT_FLASH_DURATION_MS   = 600;
 	private static final int INCORRECT_FLASH_DURATION_MS = 1500;
-	/** Scale factor applied to the tile font during an incorrect-answer flash. */
-	private static final float INCORRECT_ANSWER_FONT_SCALE = 0.6f;
+	/** Divisor applied to currentFontSize when showing the answer on an incorrect flash. */
+	private static final int INCORRECT_ANSWER_FONT_DIVISOR = 3;
 	
 	public GamePanel(GameController controller, int gridSize)
 	{
@@ -158,6 +159,8 @@ public class GamePanel extends JPanel
 	/**
 	 * Flash a tile red for 1.5 s, temporarily displaying the correct answer,
 	 * then restore the tile and invoke {@code onComplete} (on the EDT).
+	 * The answer is shown both in the tile (small HTML text) and via the
+	 * turn-label in the UI to avoid truncation on small tiles.
 	 * Used when a player answers the maths question incorrectly.
 	 */
 	public void flashTileIncorrect(int row, int col, String correctAnswer, Runnable onComplete)
@@ -166,9 +169,14 @@ public class GamePanel extends JPanel
 		Tile tile = board[row][col];
 		flashBlocked = true;
 		tile.setBackground(new Color(240, 80, 80));
-		tile.setText("= " + correctAnswer);
-		tile.setFont(tile.getFont().deriveFont(java.awt.Font.BOLD, Math.max(12, currentFontSize * INCORRECT_ANSWER_FONT_SCALE)));
+
+		// Use HTML so the text wraps and the JButton does not truncate to "..."
+		tile.setText("<html><center>= " + correctAnswer + "</center></html>");
+
+		// Use a smaller font so the answer fits even on small tiles
+		tile.setFont(new Font("Arial", Font.BOLD, Math.max(8, currentFontSize / INCORRECT_ANSWER_FONT_DIVISOR)));
 		tile.repaint();
+
 		javax.swing.Timer t = new javax.swing.Timer(INCORRECT_FLASH_DURATION_MS, e ->
 		{
 			tile.setBackground(Color.white);
@@ -247,6 +255,40 @@ public class GamePanel extends JPanel
 		}
 	}
 	
+	/**
+	 * Diffuse a bomb tile: stop its animation and convert it to a playable
+	 * standard tile without clearing any surrounding cells.
+	 * Called by the controller when the player successfully answers the
+	 * bomb-diffuse question.
+	 */
+	public void diffuseBomb(int row, int col)
+	{
+		if (row >= 0 && row < gridSize && col >= 0 && col < gridSize)
+		{
+			if (board[row][col] instanceof BombTile)
+			{
+				((BombTile) board[row][col]).stopAnimation();
+				convertToStandardTile(row, col);
+			}
+		}
+	}
+
+	/**
+	 * Trigger the explosion animation for a bomb immediately, bypassing the
+	 * remaining fuse burn.  Called by the controller when the player fails to
+	 * diffuse the bomb (wrong answer or timeout).
+	 */
+	public void triggerBombExplosion(int row, int col)
+	{
+		if (row >= 0 && row < gridSize && col >= 0 && col < gridSize)
+		{
+			if (board[row][col] instanceof BombTile)
+			{
+				((BombTile) board[row][col]).triggerExplosion();
+			}
+		}
+	}
+
 	/**
 	 * Called by a BombTile when its explosion animation finishes.
 	 * Clears the 3×3 area around the bomb in both the view and the model,

@@ -16,6 +16,7 @@ public class TicTacToeUI
 	private final GamePanel gamePanel;
 	private final JButton reset;
 	private final JSlider gridSlider;
+	private final StatsPanel statsPanel;
 	
 	private final GameController controller;
 	private final GameModel model;
@@ -51,53 +52,68 @@ public class TicTacToeUI
 			player2Name = "Player 2";
 		}
 		
-		 textLabel = new JLabel("Tic-Tac-Tactics", JLabel.CENTER);
-	     textLabel.setFont(new Font("Arial", Font.BOLD, 32));
-	     textLabel.setBackground(Color.darkGray);
-	     textLabel.setForeground(Color.white);
-	     textLabel.setOpaque(true);
-	     JPanel textPanel = new JPanel(new BorderLayout());
-	     textPanel.add(textLabel);
-         frame.add(textPanel, BorderLayout.NORTH);
-         
-         model = new GameModel(3);
-         gamePanel = new GamePanel(null, model.getGridSize());
-         controller = new GameController(model, gamePanel, this, player1Name, player2Name, difficulty);
-         
-         frame.add(gamePanel, BorderLayout.CENTER);
-         
-         reset = new JButton("Reset");
-         reset.setFont(new Font("Arial", Font.BOLD, 20));
-         reset.setBackground(Color.darkGray);
-         reset.setForeground(Color.white);
-         reset.setFocusable(false);
-         reset.addActionListener(e -> controller.resetGame());
-         frame.add(reset, BorderLayout.SOUTH);
-         
-         gridSlider = new JSlider(JSlider.VERTICAL, 3, 7, 3);
-         gridSlider.setMajorTickSpacing(1);
-         gridSlider.setPaintTicks(true);
-         gridSlider.setPaintLabels(true);
-         gridSlider.setBackground(Color.darkGray);
-         gridSlider.setForeground(Color.white);
-         gridSlider.addChangeListener(e -> {
-             int newSize = gridSlider.getValue();
-             controller.changeGridSize(newSize);
-         });
-         
-         frame.add(gridSlider, BorderLayout.EAST);
-         
-         controller.startNewRound();
+		// ── 3. Header label ───────────────────────────────────────────────
+		textLabel = new JLabel("Tic-Tac-Tactics", JLabel.CENTER);
+		textLabel.setFont(new Font("Arial", Font.BOLD, 32));
+		textLabel.setBackground(Color.darkGray);
+		textLabel.setForeground(Color.white);
+		textLabel.setOpaque(true);
+		JPanel textPanel = new JPanel(new BorderLayout());
+		textPanel.add(textLabel);
+		frame.add(textPanel, BorderLayout.NORTH);
+
+		// ── 4. Stats panel (left side) ────────────────────────────────────
+		statsPanel = new StatsPanel();
+		frame.add(statsPanel, BorderLayout.WEST);
+		
+		// ── 5. Game panel + controller ────────────────────────────────────
+		model = new GameModel(3);
+		gamePanel = new GamePanel(null, model.getGridSize());
+		controller = new GameController(model, gamePanel, this, player1Name, player2Name, difficulty);
+		
+		frame.add(gamePanel, BorderLayout.CENTER);
+		
+		// ── 6. Reset button ───────────────────────────────────────────────
+		reset = new JButton("Reset");
+		reset.setFont(new Font("Arial", Font.BOLD, 20));
+		reset.setBackground(Color.darkGray);
+		reset.setForeground(Color.black);
+		reset.setFocusable(false);
+		reset.addActionListener(e -> controller.resetGame());
+		frame.add(reset, BorderLayout.SOUTH);
+		
+		// ── 7. Grid-size slider (right side, 3–10) ────────────────────────
+		gridSlider = new JSlider(JSlider.VERTICAL, 3, 10, 3);
+		gridSlider.setMajorTickSpacing(1);
+		gridSlider.setPaintTicks(true);
+		gridSlider.setPaintLabels(true);
+		gridSlider.setBackground(Color.darkGray);
+		gridSlider.setForeground(Color.white);
+		gridSlider.addChangeListener(e -> {
+			int newSize = gridSlider.getValue();
+			controller.changeGridSize(newSize);
+		});
+		
+		frame.add(gridSlider, BorderLayout.EAST);
+		
+		controller.startNewRound();
 	}
          
-         public void updateTurnLabel(String message)
-         {
-             textLabel.setText(message);
-         }
+	public void updateTurnLabel(String message)
+	{
+		textLabel.setText(message);
+	}
          
-         public void updateScoreDisplay(Player playerX, Player playerO)
-         {
-        	 textLabel.setText(playerX.getName() + " : " + playerX.getScore() + "  |  " + playerO.getName() + " : " + playerO.getScore());
-         }
-      
+	public void updateScoreDisplay(Player playerX, Player playerO)
+	{
+		textLabel.setText(playerX.getName() + " : " + playerX.getScore()
+			+ "  |  " + playerO.getName() + " : " + playerO.getScore());
+		statsPanel.update(playerX, playerO);
+	}
+
+	/** Refresh statistics panel without changing the score header. */
+	public void updateStats(Player playerX, Player playerO)
+	{
+		statsPanel.update(playerX, playerO);
+	}
 }

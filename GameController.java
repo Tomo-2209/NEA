@@ -82,17 +82,23 @@ public class GameController
 
 		if (!correct)
 		{
-			// Wrong answer: flash red, show correct answer, then switch player
+			// Record the wrong answer and show feedback
+			currentPlayer.addWrongAnswer();
 			final String answer = question.getPrimaryAnswer();
+			ui.updateTurnLabel("Wrong!  The answer was: " + answer);
 			panel.flashTileIncorrect(row, col, answer, () ->
 			{
 				switchPlayer();
 				ui.updateTurnLabel(currentPlayer.getName() + "'s turn");
 			});
+			ui.updateStats(playerX, playerO);
 			return;
 		}
 
 		// ── Correct answer: make the move ─────────────────────────────────
+		currentPlayer.addCorrectAnswer();
+		ui.updateStats(playerX, playerO);
+
 		if (!model.makeMove(row, col, currentPlayer.getSymbol()))
 		{
 			return;
@@ -107,7 +113,9 @@ public class GameController
 			gameOver = true;
 			String winnerSymbol = result.getWinnerSymbol();
 			Player winner = winnerSymbol.equals(playerX.getSymbol()) ? playerX : playerO;
+			Player loser  = winner == playerX ? playerO : playerX;
 			winner.incrementScore();
+			loser.resetStreak();
 			panel.flashWinningCells(result.getWinningCells());
 			ui.updateScoreDisplay(playerX, playerO);
 			ui.updateTurnLabel(winner.getName() + " wins!");
@@ -115,6 +123,9 @@ public class GameController
 		else if (result.isTie())
 		{
 			gameOver = true;
+			playerX.resetStreak();
+			playerO.resetStreak();
+			ui.updateScoreDisplay(playerX, playerO);
 			ui.updateTurnLabel("It's a tie!");
 		}
 		else
@@ -126,8 +137,9 @@ public class GameController
 	
 	/**
 	 * Handle click on a bomb tile.
-	 * The turn does NOT switch here; it switches only once the explosion
-	 * animation has fully finished (see onBombAnimationFinished).
+	 * Shows a harder maths question with a countdown timer.
+	 * Correct answer in time → bomb is diffused (no blast).
+	 * Wrong answer or timeout → bomb explodes as normal.
 	 */
 	public void handleBombClick(int row, int col)
 	{
@@ -135,8 +147,27 @@ public class GameController
 		{
 			return;
 		}
-		// Intentionally do nothing else here.
-		// onBombAnimationFinished() will be called by GamePanel when the animation ends.
+
+		MathQuestion hardQuestion = questionBank.getHardQuestion();
+		BombDiffuseDialog.DiffuseResult diffuseResult =
+			BombDiffuseDialog.showDiffuseDialog(hardQuestion, panel);
+
+		if (diffuseResult == BombDiffuseDialog.DiffuseResult.DIFFUSED)
+		{
+			// Bomb defused: convert to standard tile, record correct answer, switch player
+			currentPlayer.addCorrectAnswer();
+			panel.diffuseBomb(row, col);
+			ui.updateStats(playerX, playerO);
+			switchPlayer();
+			ui.updateTurnLabel(currentPlayer.getName() + "'s turn");
+		}
+		else
+		{
+			// Failed: trigger explosion; turn switches in onBombAnimationFinished
+			currentPlayer.addWrongAnswer();
+			ui.updateStats(playerX, playerO);
+			panel.triggerBombExplosion(row, col);
+		}
 	}
 	
 	/**

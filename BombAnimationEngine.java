@@ -13,7 +13,8 @@ public class BombAnimationEngine
 	private boolean exploded = false;
 	private ArrayList<Particle> particles = new ArrayList<>();
 	private Random rand = new Random();
-	private static final float BURN_SPEED = 0.0075f; // Adjust speed of fuse burning
+	// ~40-second fuse: 1.0 / (40s × 1000ms/s / 16ms per tick) ≈ 0.00040 per tick
+	private static final float BURN_SPEED = 0.00040f;
 	
 	public BombAnimationEngine()
 	{
@@ -262,6 +263,20 @@ public class BombAnimationEngine
 	public float getBurnProgress()
 	{
 		return burnProgress;
+	}
+	
+	/**
+	 * Fast-forward to the explosion state immediately.
+	 * Used when the diffuse attempt fails – bypasses the remaining fuse burn.
+	 */
+	public void triggerExplosion()
+	{
+		if (!exploded)
+		{
+			burnProgress = 1.0f;
+			exploded = true;
+			createExplosion();
+		}
 	}
 	
 	/**

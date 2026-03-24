@@ -3,14 +3,15 @@ import java.util.Random;
 /**
  * Generates randomised maths questions for the requested difficulty level.
  *
- * GCSE topics: linear equations, percentages, geometry (area), statistics
- *              (mean), powers / indices.
+ * GCSE topics  : linear equations, percentages, geometry (area), statistics
+ *                (mean), powers/indices, substitution, speed-distance-time.
  *
- * A-Level topics: differentiation (power rule), definite integration,
- *                 logarithms, binomial coefficients, inverse-trig angles.
+ * A-Level topics: differentiation (power rule), second derivatives, stationary
+ *                 points, definite integration, logarithms, binomial
+ *                 coefficients, inverse-trig angles.
  *
  * All questions are designed so the correct answer is an integer (or a simple
- * string such as "45") – this keeps on-screen rendering and answer checking
+ * plain string) – this keeps on-screen rendering and answer checking
  * straightforward.
  */
 public class MathQuestionBank
@@ -18,9 +19,8 @@ public class MathQuestionBank
 	private final MathDifficulty difficulty;
 	private final Random random;
 
-	// Number of question generators available at each level
-	private static final int GCSE_TYPES   = 5;
-	private static final int ALEVEL_TYPES = 5;
+	private static final int GCSE_TYPES   = 7;
+	private static final int ALEVEL_TYPES = 7;
 
 	public MathQuestionBank(MathDifficulty difficulty)
 	{
@@ -41,6 +41,15 @@ public class MathQuestionBank
 		}
 	}
 
+	/**
+	 * Return a harder question used for bomb-diffuse challenges.
+	 * Always draws from the A-Level pool regardless of the chosen difficulty.
+	 */
+	public MathQuestion getHardQuestion()
+	{
+		return getALevelQuestion();
+	}
+
 	// -----------------------------------------------------------------------
 	// GCSE generators
 	// -----------------------------------------------------------------------
@@ -53,20 +62,21 @@ public class MathQuestionBank
 			case 1:  return generatePercentage();
 			case 2:  return generateArea();
 			case 3:  return generateMean();
-			default: return generatePower();
+			case 4:  return generatePower();
+			case 5:  return generateSubstitution();
+			default: return generateSpeedDistanceTime();
 		}
 	}
 
 	/**
 	 * Solve a linear equation of the form  ax + b = c  (integer solution).
-	 * a is chosen in [2, 9], solution in [-5, 5] \ {0}, b in [-10, 10].
 	 */
 	private MathQuestion generateLinearEquation()
 	{
-		int a        = 2 + random.nextInt(8);           // 2–9
-		int solution = (random.nextInt(11) - 5);        // -5 to 5
+		int a        = 2 + random.nextInt(8);
+		int solution = (random.nextInt(11) - 5);
 		if (solution == 0) solution = 1;
-		int b = random.nextInt(21) - 10;                // -10 to 10
+		int b = random.nextInt(21) - 10;
 		int c = a * solution + b;
 
 		String question;
@@ -80,7 +90,7 @@ public class MathQuestionBank
 		}
 		else
 		{
-			question = String.format("Solve for x:    %dx - %d = %d", a, -b, c);
+			question = String.format("Solve for x:    %dx \u2212 %d = %d", a, -b, c);
 		}
 
 		return new MathQuestion(question, String.valueOf(solution), "Algebra");
@@ -94,7 +104,7 @@ public class MathQuestionBank
 	{
 		int[] percents = {5, 10, 15, 20, 25, 30, 40, 50, 75};
 		int pct = percents[random.nextInt(percents.length)];
-		int y   = (1 + random.nextInt(20)) * 20;     // 20, 40, … 400
+		int y   = (1 + random.nextInt(20)) * 20;
 		int ans = pct * y / 100;
 
 		String question = String.format("What is %d%% of %d?", pct, y);
@@ -108,7 +118,6 @@ public class MathQuestionBank
 	{
 		if (random.nextBoolean())
 		{
-			// Rectangle
 			int w = 2 + random.nextInt(12);
 			int h = 2 + random.nextInt(12);
 			String q = String.format("Find the area of a rectangle with width %d and height %d.", w, h);
@@ -116,10 +125,9 @@ public class MathQuestionBank
 		}
 		else
 		{
-			// Triangle: use an even base so area = base/2 * height is always integer
-			int base   = (1 + random.nextInt(10)) * 2;   // even, 2–20
+			int base   = (1 + random.nextInt(10)) * 2;
 			int height = 2 + random.nextInt(10);
-			int area   = base / 2 * height;
+			int area   = (base * height) / 2;   // base is always even, so result is exact
 			String q   = String.format(
 				"Find the area of a triangle with base %d and perpendicular height %d.", base, height);
 			return new MathQuestion(q, String.valueOf(area), "Geometry");
@@ -128,20 +136,16 @@ public class MathQuestionBank
 
 	/**
 	 * Find the mean of a small list of positive integers.
-	 * The list is constructed so the mean is always an integer in [2, 9].
 	 */
 	private MathQuestion generateMean()
 	{
-		int mean  = 2 + random.nextInt(8);           // target mean: 2–9
-		int count = 3 + random.nextInt(3);           // 3, 4 or 5 numbers
+		int mean  = 2 + random.nextInt(8);
+		int count = 3 + random.nextInt(3);
 		int[] nums = new int[count];
 		int remaining = mean * count;
 
 		for (int i = 0; i < count - 1; i++)
 		{
-			// Allow each value to be up to (mean + SPREAD) above the mean so that
-			// the final element calculated as `remaining` stays ≥ 1.
-			// SPREAD controls how varied the numbers in the list appear.
 			final int SPREAD = 6;
 			int maxAllowed = remaining - (count - 1 - i);
 			int lo = Math.max(1, remaining - (count - 1 - i) * (mean + SPREAD));
@@ -152,7 +156,6 @@ public class MathQuestionBank
 		}
 		nums[count - 1] = remaining;
 
-		// Safety fallback: if last element went negative, use all-equal array
 		if (nums[count - 1] < 1)
 		{
 			for (int i = 0; i < count; i++) nums[i] = mean;
@@ -169,16 +172,20 @@ public class MathQuestionBank
 	}
 
 	/**
-	 * Evaluate a^n or a^2 + b^2 (integer result).
+	 * Evaluate a power expression using proper HTML superscript notation.
+	 * Variant A: a^n (n = 2–4)
+	 * Variant B: a² + b²
 	 */
 	private MathQuestion generatePower()
 	{
 		if (random.nextBoolean())
 		{
-			int base = 2 + random.nextInt(5);           // 2–6
-			int exp  = 2 + random.nextInt(3);           // 2–4
+			int base = 2 + random.nextInt(5);
+			int exp  = 2 + random.nextInt(3);
 			int ans  = (int) Math.pow(base, exp);
-			String q = String.format("Evaluate    %d^%d", base, exp);
+			String q = String.format(
+				"<html><center><b>Evaluate</b><br><br>%d<sup>%d</sup></center></html>",
+				base, exp);
 			return new MathQuestion(q, String.valueOf(ans), "Powers & Indices");
 		}
 		else
@@ -186,9 +193,79 @@ public class MathQuestionBank
 			int a   = 2 + random.nextInt(9);
 			int b   = 2 + random.nextInt(9);
 			int ans = a * a + b * b;
-			String q = String.format("Evaluate    %d\u00b2 + %d\u00b2", a, b);  // ²
+			String q = String.format(
+				"<html><center><b>Evaluate</b><br><br>%d<sup>2</sup> + %d<sup>2</sup></center></html>",
+				a, b);
 			return new MathQuestion(q, String.valueOf(ans), "Powers & Indices");
 		}
+	}
+
+	/**
+	 * Evaluate a linear expression by substituting a given value of x.
+	 * Expression: ax + b  (integer result).
+	 */
+	private MathQuestion generateSubstitution()
+	{
+		int a = 2 + random.nextInt(7);
+		int b = random.nextInt(11) - 5;
+		int x = 2 + random.nextInt(6);
+		int result = a * x + b;
+
+		String expr;
+		if (b == 0)
+		{
+			expr = String.format("%dx", a);
+		}
+		else if (b > 0)
+		{
+			expr = String.format("%dx + %d", a, b);
+		}
+		else
+		{
+			expr = String.format("%dx \u2212 %d", a, -b);
+		}
+
+		String question = String.format("If x = %d,  find the value of    %s", x, expr);
+		return new MathQuestion(question, String.valueOf(result), "Substitution");
+	}
+
+	/**
+	 * Speed / Distance / Time question.
+	 * All values chosen so the answer is a whole number.
+	 */
+	private MathQuestion generateSpeedDistanceTime()
+	{
+		int speed    = (1 + random.nextInt(9)) * 10;   // 10, 20, … 90
+		int time     = 1 + random.nextInt(5);           // 1–5 hours
+		int distance = speed * time;
+
+		int variant = random.nextInt(3);
+		String question;
+		String answer;
+
+		if (variant == 0)
+		{
+			question = String.format(
+				"A car travels %d km in %d hour%s.  What is its speed in km/h?",
+				distance, time, time > 1 ? "s" : "");
+			answer = String.valueOf(speed);
+		}
+		else if (variant == 1)
+		{
+			question = String.format(
+				"A car travels at %d km/h for %d hour%s.  How far does it travel (km)?",
+				speed, time, time > 1 ? "s" : "");
+			answer = String.valueOf(distance);
+		}
+		else
+		{
+			question = String.format(
+				"A car travels %d km at %d km/h.  How long does the journey take (hours)?",
+				distance, speed);
+			answer = String.valueOf(time);
+		}
+
+		return new MathQuestion(question, answer, "Speed, Distance & Time");
 	}
 
 	// -----------------------------------------------------------------------
@@ -200,21 +277,22 @@ public class MathQuestionBank
 		switch (random.nextInt(ALEVEL_TYPES))
 		{
 			case 0:  return generateDifferentiation();
-			case 1:  return generateDefiniteIntegral();
-			case 2:  return generateLogarithm();
-			case 3:  return generateBinomialCoeff();
+			case 1:  return generateSecondDerivative();
+			case 2:  return generateStationaryPoint();
+			case 3:  return generateDefiniteIntegral();
+			case 4:  return generateLogarithm();
+			case 5:  return generateBinomialCoeff();
 			default: return generateInverseTrig();
 		}
 	}
 
 	/**
-	 * Differentiate  y = ax^n  by the power rule.
-	 * Ask for the integer coefficient of the resulting term.
+	 * Differentiate  y = ax^n  by the power rule; ask for the coefficient.
 	 */
 	private MathQuestion generateDifferentiation()
 	{
-		int a = 2 + random.nextInt(8);   // 2–9
-		int n = 2 + random.nextInt(4);   // 2–5  (keeps new power ≥ 1)
+		int a = 2 + random.nextInt(8);
+		int n = 2 + random.nextInt(4);
 		int coefficient = a * n;
 		int newPower    = n - 1;
 
@@ -232,39 +310,94 @@ public class MathQuestionBank
 				+ "What is the coefficient of x<sup>%d</sup> in dy/dx?", a, n, newPower);
 		}
 
-		// Wrap in HTML so the JLabel renders the tags
 		String question = "<html><center>" + questionBody + "</center></html>";
 		return new MathQuestion(question, String.valueOf(coefficient), "Differentiation");
 	}
 
 	/**
-	 * Evaluate the definite integral  integral[0 to b] of a*x^n dx.
-	 * The coefficient a is chosen as k*(n+1) so the result k*b^(n+1) is always
-	 * an integer.
+	 * Find the coefficient of the second derivative f''(x) for f(x) = ax^n.
+	 * n is chosen in [3, 5] so the second derivative still contains an x term.
+	 */
+	private MathQuestion generateSecondDerivative()
+	{
+		int a      = 2 + random.nextInt(6);
+		int n      = 3 + random.nextInt(3);   // 3–5
+		int coeff  = a * n * (n - 1);
+		int power2 = n - 2;
+
+		String questionBody;
+		if (power2 == 1)
+		{
+			questionBody = String.format(
+				"<b>Find the second derivative</b><br><br>"
+				+ "f(x) = %dx<sup>%d</sup><br><br>"
+				+ "What is the coefficient of x in f''(x)?", a, n);
+		}
+		else
+		{
+			questionBody = String.format(
+				"<b>Find the second derivative</b><br><br>"
+				+ "f(x) = %dx<sup>%d</sup><br><br>"
+				+ "What is the coefficient of x<sup>%d</sup> in f''(x)?", a, n, power2);
+		}
+
+		String question = "<html><center>" + questionBody + "</center></html>";
+		return new MathQuestion(question, String.valueOf(coeff), "Differentiation");
+	}
+
+	/**
+	 * Find the x-value of a stationary point given f'(x) = nx − c.
+	 * The answer x = c/n is always a positive integer.
+	 */
+	private MathQuestion generateStationaryPoint()
+	{
+		int n  = 2 + random.nextInt(4);   // coefficient: 2–5
+		int x0 = 2 + random.nextInt(7);   // answer: 2–8
+		int c  = n * x0;                  // so f'(x) = nx − c  →  x = c/n
+
+		String questionBody = String.format(
+			"<b>Find the stationary point</b><br><br>"
+			+ "f'(x) = %dx \u2212 %d<br><br>"
+			+ "What is the x-value of the stationary point?", n, c);
+
+		String question = "<html><center>" + questionBody + "</center></html>";
+		return new MathQuestion(question, String.valueOf(x0), "Differentiation");
+	}
+
+	/**
+	 * Evaluate the definite integral ∫[0 to b] ax^n dx.
+	 * Uses a 3-row HTML table so the upper and lower limits are symmetrically
+	 * placed above and below the integral sign.
 	 */
 	private MathQuestion generateDefiniteIntegral()
 	{
-		int n      = 1 + random.nextInt(3);            // power: 1, 2 or 3
-		int b      = 1 + random.nextInt(4);            // upper limit: 1–4
-		int k      = 1 + random.nextInt(5);            // scale factor: 1–5
-		int a      = k * (n + 1);                      // coefficient
+		int n      = 1 + random.nextInt(3);
+		int b      = 1 + random.nextInt(4);
+		int k      = 1 + random.nextInt(5);
+		int a      = k * (n + 1);
 		int result = k * (int) Math.pow(b, n + 1);
 
+		// 3-row table: upper limit / ∫ / lower limit, integrand spans all rows
 		String question = String.format(
 			"<html><center><b>Evaluate the definite integral</b><br><br>"
-			+ "\u222b<sub>0</sub><sup>%d</sup> %dx<sup>%d</sup> dx</center></html>",
-			b, a, n);   // ∫
+			+ "<table cellpadding='1' cellspacing='0'>"
+			+ "<tr><td align='center' valign='bottom'><small>%d</small></td>"
+			+ "    <td rowspan='3' valign='middle'>&nbsp;%dx<sup>%d</sup>&nbsp;dx</td></tr>"
+			+ "<tr><td align='center'>&#8747;</td></tr>"
+			+ "<tr><td align='center' valign='top'><small>0</small></td></tr>"
+			+ "</table></center></html>",
+			b, a, n);
 
 		return new MathQuestion(question, String.valueOf(result), "Integration");
 	}
 
 	/**
-	 * Evaluate  log_base(value)  where value = base^exp, so the answer is exp.
+	 * Evaluate  log_base(value)  where value = base^exp.
 	 */
 	private MathQuestion generateLogarithm()
 	{
-		int base  = 2 + random.nextInt(4);   // 2–5
-		int exp   = 1 + random.nextInt(4);   // 1–4
+		int base  = 2 + random.nextInt(4);
+		int exp   = 1 + random.nextInt(4);
 		int value = (int) Math.pow(base, exp);
 
 		String question = String.format(
@@ -276,12 +409,11 @@ public class MathQuestionBank
 
 	/**
 	 * Evaluate the binomial coefficient  nCr.
-	 * n is in [4, 9], r is in [1, 3] to keep answers manageable.
 	 */
 	private MathQuestion generateBinomialCoeff()
 	{
-		int n      = 4 + random.nextInt(6);   // 4–9
-		int r      = 1 + random.nextInt(3);   // 1–3
+		int n      = 4 + random.nextInt(6);
+		int r      = 1 + random.nextInt(3);
 		int result = binomialCoeff(n, r);
 
 		String question = String.format(
@@ -303,20 +435,18 @@ public class MathQuestionBank
 	}
 
 	/**
-	 * Ask for the acute angle (in degrees) corresponding to a standard
-	 * sin / cos / tan value.  All answers are integers (30, 45, 60 or 90).
+	 * Ask for the acute angle (in degrees) for a standard trig value.
 	 */
 	private MathQuestion generateInverseTrig()
 	{
-		// Each entry: {function label, value string, answer in degrees}
 		String[][] data =
 		{
-			{"sin(\u03b8) = 0.5",         "30"},   // θ
+			{"sin(\u03b8) = 0.5",         "30"},
 			{"sin(\u03b8) = 1",           "90"},
 			{"cos(\u03b8) = 0.5",         "60"},
 			{"cos(\u03b8) = 1",           "0"},
 			{"tan(\u03b8) = 1",           "45"},
-			{"sin(\u03b8) = \u221a3 / 2", "60"},   // √
+			{"sin(\u03b8) = \u221a3 / 2", "60"},
 			{"cos(\u03b8) = \u221a3 / 2", "30"},
 			{"sin(\u03b8) = \u221a2 / 2", "45"},
 			{"cos(\u03b8) = \u221a2 / 2", "45"},
@@ -330,3 +460,4 @@ public class MathQuestionBank
 		return new MathQuestion(question, entry[1], "Trigonometry");
 	}
 }
+
