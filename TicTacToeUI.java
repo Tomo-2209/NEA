@@ -88,7 +88,7 @@ public class TicTacToeUI
 		reset = new JButton("Reset");
 		reset.setFont(new Font("Arial", Font.BOLD, 20));
 		reset.setBackground(Color.darkGray);
-		reset.setForeground(Color.white);
+		reset.setForeground(new Color(255, 165, 0));
 		reset.setFocusable(false);
 		reset.addActionListener(e -> controller.resetGame());
 		frame.add(reset, BorderLayout.SOUTH);
@@ -99,7 +99,7 @@ public class TicTacToeUI
 		gridSlider.setPaintTicks(true);
 		gridSlider.setPaintLabels(true);
 		gridSlider.setBackground(Color.darkGray);
-		gridSlider.setForeground(Color.white);
+		gridSlider.setForeground(new Color(200, 200, 255));
 		gridSlider.addChangeListener(e -> {
 			SoundManager.getInstance().playSliderChange();
 			int newSize = gridSlider.getValue();
