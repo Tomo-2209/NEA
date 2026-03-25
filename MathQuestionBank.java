@@ -6,9 +6,15 @@ import java.util.Random;
  * GCSE topics  : linear equations, percentages, geometry (area), statistics
  *                (mean), powers/indices, substitution, speed-distance-time.
  *
+ * GCSE harder  : quadratic equations, Pythagoras, simultaneous equations,
+ *                nth-term sequences.
+ *
  * A-Level topics: differentiation (power rule), second derivatives, stationary
  *                 points, definite integration, logarithms, binomial
  *                 coefficients, inverse-trig angles.
+ *
+ * A-Level harder: geometric series sum, chain-rule evaluation, harder definite
+ *                 integrals.
  *
  * All questions are designed so the correct answer is an integer (or a simple
  * plain string) – this keeps on-screen rendering and answer checking
@@ -19,8 +25,10 @@ public class MathQuestionBank
 	private final MathDifficulty difficulty;
 	private final Random random;
 
-	private static final int GCSE_TYPES   = 7;
-	private static final int ALEVEL_TYPES = 7;
+	private static final int GCSE_TYPES        = 7;
+	private static final int GCSE_HARD_TYPES   = 4;
+	private static final int ALEVEL_TYPES      = 7;
+	private static final int ALEVEL_HARD_TYPES = 3;
 
 	public MathQuestionBank(MathDifficulty difficulty)
 	{
@@ -43,11 +51,19 @@ public class MathQuestionBank
 
 	/**
 	 * Return a harder question used for bomb-diffuse challenges.
-	 * Always draws from the A-Level pool regardless of the chosen difficulty.
+	 * If the game was set to GCSE, the challenge is a harder GCSE question.
+	 * If the game was set to A-Level, the challenge is a harder A-Level question.
 	 */
 	public MathQuestion getHardQuestion()
 	{
-		return getALevelQuestion();
+		if (difficulty == MathDifficulty.GCSE)
+		{
+			return getHardGcseQuestion();
+		}
+		else
+		{
+			return getHardALevelQuestion();
+		}
 	}
 
 	// -----------------------------------------------------------------------
@@ -458,6 +474,210 @@ public class MathQuestionBank
 			+ "%s</center></html>", entry[0]);
 
 		return new MathQuestion(question, entry[1], "Trigonometry");
+	}
+
+	// -----------------------------------------------------------------------
+	// Harder GCSE generators  (used for bomb-diffuse challenges)
+	// -----------------------------------------------------------------------
+
+	private MathQuestion getHardGcseQuestion()
+	{
+		switch (random.nextInt(GCSE_HARD_TYPES))
+		{
+			case 0:  return generateQuadratic();
+			case 1:  return generatePythagoras();
+			case 2:  return generateSimultaneous();
+			default: return generateNthTerm();
+		}
+	}
+
+	/**
+	 * Solve a quadratic x² − (r1+r2)x + r1·r2 = 0 with two positive integer roots.
+	 * The player is asked for the larger root.
+	 */
+	private MathQuestion generateQuadratic()
+	{
+		int r1 = 1 + random.nextInt(5);            // smaller root: 1–5
+		int r2 = r1 + 1 + random.nextInt(5);       // larger root: r1+1 … r1+5
+		int b  = -(r1 + r2);                       // coefficient of x (negative)
+		int c  = r1 * r2;                          // constant term
+
+		String bStr = (b < 0)
+			? "\u2212 " + (-b)     // e.g. "− 7"
+			: "+ " + b;
+		String cStr = "+ " + c;
+
+		String questionBody = String.format(
+			"<b>Solve the quadratic equation</b><br><br>"
+			+ "x<sup>2</sup> %s x %s = 0<br><br>"
+			+ "What is the <u>larger</u> root?",
+			bStr, cStr);
+
+		String question = "<html><center>" + questionBody + "</center></html>";
+		return new MathQuestion(question, String.valueOf(r2), "Quadratic Equations");
+	}
+
+	/**
+	 * Find the hypotenuse of a right-angled triangle using a Pythagorean triple.
+	 */
+	private MathQuestion generatePythagoras()
+	{
+		int[][] triples = {
+			{3, 4, 5}, {5, 12, 13}, {8, 15, 17}, {7, 24, 25},
+			{6, 8, 10}, {9, 12, 15}, {5, 12, 13}
+		};
+		int[] triple = triples[random.nextInt(triples.length)];
+		int a = triple[0], b = triple[1], c = triple[2];
+
+		String question = String.format(
+			"<html><center><b>Pythagoras</b><br><br>"
+			+ "A right-angled triangle has legs of length %d and %d.<br>"
+			+ "What is the length of the hypotenuse?</center></html>", a, b);
+
+		return new MathQuestion(question, String.valueOf(c), "Pythagoras");
+	}
+
+	/**
+	 * Solve a pair of simultaneous linear equations; ask for x.
+	 * Equations: a1·x + b1·y = c1  and  a2·x + b2·y = c2.
+	 * x and y are chosen first (small positive integers) so integer solutions
+	 * are guaranteed.
+	 */
+	private MathQuestion generateSimultaneous()
+	{
+		int x = 1 + random.nextInt(5);
+		int y = 1 + random.nextInt(5);
+
+		// Pick two distinct coefficient pairs so the system isn't degenerate
+		int a1 = 1 + random.nextInt(3), b1 = 1 + random.nextInt(3);
+		int a2 = a1 + 1 + random.nextInt(2), b2 = b1 - 1;
+		if (b2 <= 0) b2 = b1 + 1;
+
+		int c1 = a1 * x + b1 * y;
+		int c2 = a2 * x + b2 * y;
+
+		String questionBody = String.format(
+			"<b>Solve the simultaneous equations</b><br><br>"
+			+ "%dx + %dy = %d<br>"
+			+ "%dx + %dy = %d<br><br>"
+			+ "What is the value of x?",
+			a1, b1, c1, a2, b2, c2);
+
+		String question = "<html><center>" + questionBody + "</center></html>";
+		return new MathQuestion(question, String.valueOf(x), "Simultaneous Equations");
+	}
+
+	/**
+	 * Find the nth term of an arithmetic sequence given its general formula an + b.
+	 */
+	private MathQuestion generateNthTerm()
+	{
+		int a = 2 + random.nextInt(5);   // common difference: 2–6
+		int b = 1 + random.nextInt(10);  // constant offset: 1–10
+		int n = 5 + random.nextInt(6);   // term number to evaluate: 5–10
+		int answer = a * n + b;
+
+		String question = String.format(
+			"<html><center><b>Sequences</b><br><br>"
+			+ "The n<sup>th</sup> term of a sequence is given by <b>%dn + %d</b>.<br><br>"
+			+ "What is the <b>%d</b><sup>th</sup> term?</center></html>",
+			a, b, n);
+
+		return new MathQuestion(question, String.valueOf(answer), "Sequences");
+	}
+
+	// -----------------------------------------------------------------------
+	// Harder A-Level generators  (used for bomb-diffuse challenges)
+	// -----------------------------------------------------------------------
+
+	private MathQuestion getHardALevelQuestion()
+	{
+		switch (random.nextInt(ALEVEL_HARD_TYPES))
+		{
+			case 0:  return generateGeometricSeries();
+			case 1:  return generateChainRule();
+			default: return generateHarderIntegral();
+		}
+	}
+
+	/**
+	 * Find the sum of the first n terms of a geometric series  S = a(rⁿ − 1)/(r − 1).
+	 * Parameters are chosen so the result is always a manageable integer.
+	 */
+	private MathQuestion generateGeometricSeries()
+	{
+		int a = 1 + random.nextInt(3);   // first term: 1–3
+		int r = 2 + random.nextInt(2);   // common ratio: 2 or 3
+		int n = 3 + random.nextInt(3);   // number of terms: 3–5
+		int sum = a * ((int) Math.pow(r, n) - 1) / (r - 1);
+
+		String question = String.format(
+			"<html><center><b>Geometric Series</b><br><br>"
+			+ "Find the sum of the first <b>%d</b> terms<br>"
+			+ "of the geometric series with first term <b>%d</b><br>"
+			+ "and common ratio <b>%d</b>.</center></html>",
+			n, a, r);
+
+		return new MathQuestion(question, String.valueOf(sum), "Sequences & Series");
+	}
+
+	/**
+	 * Differentiate y = (ax)ⁿ using the chain rule and evaluate dy/dx at x = 0.
+	 * dy/dx = an·(ax)^(n-1) evaluated at x=0 gives an·0^(n-1) = 0 for n > 1,
+	 * so instead we ask for the coefficient of xⁿ⁻¹ in dy/dx.
+	 *
+	 * y = (ax)^n = aⁿ·xⁿ  →  dy/dx = n·aⁿ·x^(n-1).
+	 * The player is asked for the coefficient  n·aⁿ.
+	 */
+	private MathQuestion generateChainRule()
+	{
+		int a = 2 + random.nextInt(3);   // inner coefficient: 2–4
+		int n = 2 + random.nextInt(3);   // power: 2–4
+		int coefficient = n * (int) Math.pow(a, n);
+		int resultPower = n - 1;
+
+		String questionBody;
+		if (resultPower == 1)
+		{
+			questionBody = String.format(
+				"<b>Chain Rule</b><br><br>"
+				+ "Differentiate&nbsp;&nbsp;y = (%dx)<sup>%d</sup><br><br>"
+				+ "What is the coefficient of x in dy/dx?", a, n);
+		}
+		else
+		{
+			questionBody = String.format(
+				"<b>Chain Rule</b><br><br>"
+				+ "Differentiate&nbsp;&nbsp;y = (%dx)<sup>%d</sup><br><br>"
+				+ "What is the coefficient of x<sup>%d</sup> in dy/dx?", a, n, resultPower);
+		}
+
+		String question = "<html><center>" + questionBody + "</center></html>";
+		return new MathQuestion(question, String.valueOf(coefficient), "Differentiation");
+	}
+
+	/**
+	 * Evaluate a harder definite integral  ∫₀ᵇ ax² dx = ab³/3.
+	 * a is chosen as a multiple of 3 so the result is always an integer.
+	 */
+	private MathQuestion generateHarderIntegral()
+	{
+		int b      = 2 + random.nextInt(4);          // upper limit: 2–5
+		int k      = 1 + random.nextInt(4);          // multiplier: 1–4
+		int a      = k * 3;                          // coefficient (multiple of 3)
+		int result = k * b * b * b;                  // a·b³/3 = k·b³
+
+		String question = String.format(
+			"<html><center><b>Evaluate the definite integral</b><br><br>"
+			+ "<table cellpadding='1' cellspacing='0'>"
+			+ "<tr><td align='center' valign='bottom'><small>%d</small></td>"
+			+ "    <td rowspan='3' valign='middle'>&nbsp;%dx<sup>2</sup>&nbsp;dx</td></tr>"
+			+ "<tr><td align='center'>&#8747;</td></tr>"
+			+ "<tr><td align='center' valign='top'><small>0</small></td></tr>"
+			+ "</table></center></html>",
+			b, a);
+
+		return new MathQuestion(question, String.valueOf(result), "Integration");
 	}
 }
 

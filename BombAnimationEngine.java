@@ -13,7 +13,11 @@ public class BombAnimationEngine
 	private boolean exploded = false;
 	private ArrayList<Particle> particles = new ArrayList<>();
 	private Random rand = new Random();
-	// ~40-second fuse: 1.0 / (40s × 1000ms/s / 16ms per tick) ≈ 0.00040 per tick
+	// ~40-second fuse: 1.0 / (40s × 1000ms/s / 16ms per tick) ≈ 0.00040 per tick.
+	// This is intentionally longer than BombDiffuseDialog.COUNTDOWN_SECONDS (35 s)
+	// so the fuse is visually still burning when the dialog timer expires.
+	// If the player fails to diffuse, triggerExplosion() fast-forwards the animation
+	// immediately rather than waiting for the fuse to burn naturally.
 	private static final float BURN_SPEED = 0.00040f;
 	
 	public BombAnimationEngine()

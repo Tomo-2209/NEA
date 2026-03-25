@@ -1,7 +1,9 @@
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Font;
+import java.awt.Image;
 
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -11,6 +13,12 @@ import javax.swing.JSlider;
 
 public class TicTacToeUI
 {
+	/**
+	 * Path to the main window icon.
+	 * Replace with the actual path to your application icon file once it is ready.
+	 */
+	public static final String FRAME_ICON_PATH = "images/app_icon.png";
+
 	private final JFrame frame;
 	private final JLabel textLabel;
 	private final GamePanel gamePanel;
@@ -25,6 +33,9 @@ public class TicTacToeUI
 	{
 		this.frame = frame;
 
+		// ── 0. Apply window icon ──────────────────────────────────────────
+		applyFrameIcon();
+
 		// ── 1. Difficulty selection ───────────────────────────────────────
 		String[] options = {"GCSE", "A-Level"};
 		int choice = JOptionPane.showOptionDialog(
@@ -33,7 +44,7 @@ public class TicTacToeUI
 			"Tic-Tac-Total \u2013 Difficulty",
 			JOptionPane.DEFAULT_OPTION,
 			JOptionPane.QUESTION_MESSAGE,
-			null,
+			loadDialogIcon(),
 			options,
 			options[0]);
 
@@ -54,7 +65,7 @@ public class TicTacToeUI
 		
 		// ── 3. Header label ───────────────────────────────────────────────
 		textLabel = new JLabel("Tic-Tac-Tactics", JLabel.CENTER);
-		textLabel.setFont(new Font("Arial", Font.BOLD, 32));
+		textLabel.setFont(new Font("Arial", Font.BOLD, 28));
 		textLabel.setBackground(Color.darkGray);
 		textLabel.setForeground(Color.white);
 		textLabel.setOpaque(true);
@@ -77,7 +88,7 @@ public class TicTacToeUI
 		reset = new JButton("Reset");
 		reset.setFont(new Font("Arial", Font.BOLD, 20));
 		reset.setBackground(Color.darkGray);
-		reset.setForeground(Color.black);
+		reset.setForeground(Color.white);
 		reset.setFocusable(false);
 		reset.addActionListener(e -> controller.resetGame());
 		frame.add(reset, BorderLayout.SOUTH);
@@ -90,6 +101,7 @@ public class TicTacToeUI
 		gridSlider.setBackground(Color.darkGray);
 		gridSlider.setForeground(Color.white);
 		gridSlider.addChangeListener(e -> {
+			SoundManager.getInstance().playSliderChange();
 			int newSize = gridSlider.getValue();
 			controller.changeGridSize(newSize);
 		});
@@ -97,6 +109,41 @@ public class TicTacToeUI
 		frame.add(gridSlider, BorderLayout.EAST);
 		
 		controller.startNewRound();
+	}
+
+	/**
+	 * Apply the application icon to the main frame title bar.
+	 * Replace {@link #FRAME_ICON_PATH} with your actual icon path.
+	 */
+	private void applyFrameIcon()
+	{
+		try
+		{
+			Image icon = new ImageIcon(FRAME_ICON_PATH).getImage();
+			frame.setIconImage(icon);
+		}
+		catch (Exception e)
+		{
+			// Icon not present yet – skip silently
+		}
+	}
+
+	/**
+	 * Load the icon used in the JOptionPane input dialogs.
+	 * Returns {@code null} if the file is not yet present (the dialog
+	 * then uses the default Swing icon).
+	 * Replace {@link #FRAME_ICON_PATH} with your actual icon path.
+	 */
+	private ImageIcon loadDialogIcon()
+	{
+		try
+		{
+			return new ImageIcon(FRAME_ICON_PATH);
+		}
+		catch (Exception e)
+		{
+			return null;
+		}
 	}
          
 	public void updateTurnLabel(String message)

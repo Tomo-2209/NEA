@@ -6,7 +6,8 @@ public class Runner
 	{
 		JFrame mainframe = new JFrame("Tic-Tac-Total");
 		mainframe.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		mainframe.setSize(950, 750);
+		mainframe.setSize(800, 700);
+		mainframe.setResizable(false);
 		mainframe.setLocationRelativeTo(null);
 		
 		new TicTacToeUI(mainframe);

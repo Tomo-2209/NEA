@@ -4,11 +4,13 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.Frame;
+import java.awt.Image;
 import java.awt.Window;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
 import javax.swing.BorderFactory;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
@@ -21,7 +23,8 @@ import javax.swing.Timer;
 /**
  * Modal dialog displayed when a bomb tile is clicked.
  * The player has a limited time (COUNTDOWN_SECONDS) to answer a harder maths
- * question.  A Swing Timer drives the countdown progress bar and label.
+ * question.  A Swing Timer drives the countdown progress bar and label and
+ * plays a tick sound each second.
  *
  * Possible results:
  *   DIFFUSED – player answered correctly within the time limit.
@@ -29,7 +32,19 @@ import javax.swing.Timer;
  */
 public class BombDiffuseDialog extends JDialog
 {
-	/** Time allowed to answer the diffuse question. */
+	/**
+	 * Path to the icon shown in the dialog title bar.
+	 * Replace with the actual path to your bomb image file once it is ready.
+	 */
+	public static final String DIALOG_ICON_PATH = "images/bomb_icon.png";
+
+	/**
+	 * Time allowed to answer the diffuse question.
+	 * The bomb fuse animation in {@link BombAnimationEngine} is set to ~40 s,
+	 * deliberately longer than this value so the fuse is still visibly burning
+	 * if the player fails to answer in time.  On failure, {@code triggerExplosion()}
+	 * fast-forwards the animation instead of waiting for the natural burn-out.
+	 */
 	private static final int COUNTDOWN_SECONDS = 35;
 
 	public enum DiffuseResult { DIFFUSED, FAILED }
@@ -46,10 +61,28 @@ public class BombDiffuseDialog extends JDialog
 	{
 		super(parent, "\uD83D\uDCA3  DEFUSE THE BOMB!", true);
 		this.question = question;
+		applyIcon();
 		buildUI();
 		pack();
 		setResizable(false);
 		setLocationRelativeTo(parent);
+	}
+
+	/**
+	 * Set the dialog window icon.
+	 * Replace {@link #DIALOG_ICON_PATH} with your actual image path.
+	 */
+	private void applyIcon()
+	{
+		try
+		{
+			Image icon = new ImageIcon(DIALOG_ICON_PATH).getImage();
+			setIconImage(icon);
+		}
+		catch (Exception e)
+		{
+			// Icon file not present yet – skip silently
+		}
 	}
 
 	private void buildUI()
@@ -139,6 +172,7 @@ public class BombDiffuseDialog extends JDialog
 		countdownTimer = new Timer(1000, e ->
 		{
 			secondsLeft--;
+			SoundManager.getInstance().playBombTick();
 			countdownLabel.setText("Time remaining: " + secondsLeft + "s");
 			progressBar.setValue(secondsLeft);
 

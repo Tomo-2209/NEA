@@ -124,11 +124,13 @@ public class GamePanel extends JPanel
 			{
 				return;
 			}
+			SoundManager.getInstance().playTileClick();
 			bomb.onClick();
 			controller.handleBombClick(bomb.getRow(), bomb.getCol());
 		}
 		else if (tile instanceof StandardTile)
 		{
+			SoundManager.getInstance().playTileClick();
 			StandardTile standard = (StandardTile) tile;
 			controller.handleTileClick(standard.getRow(), standard.getCol());
 		}
@@ -291,13 +293,15 @@ public class GamePanel extends JPanel
 
 	/**
 	 * Called by a BombTile when its explosion animation finishes.
-	 * Clears the 3×3 area around the bomb in both the view and the model,
-	 * then converts the bomb tile itself into a playable StandardTile so
-	 * players can place symbols on it again.
+	 * Plays the explosion sound, clears the 3×3 area around the bomb in both
+	 * the view and the model, then converts the bomb tile itself into a
+	 * playable StandardTile so players can place symbols on it again.
 	 * Finally notifies the controller so it can switch the active player.
 	 */
 	public void onBombExploded(int bombRow, int bombCol)
 	{
+		SoundManager.getInstance().playBombExplode();
+
 		for (int r = bombRow - 1; r <= bombRow + 1; r++)
 		{
 			for (int c = bombCol - 1; c <= bombCol + 1; c++)

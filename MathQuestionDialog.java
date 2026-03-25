@@ -3,9 +3,11 @@ import java.awt.Color;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.Frame;
+import java.awt.Image;
 import java.awt.Window;
 
 import javax.swing.BorderFactory;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
@@ -23,6 +25,12 @@ import javax.swing.SwingUtilities;
  */
 public class MathQuestionDialog extends JDialog
 {
+	/**
+	 * Path to the icon shown in the dialog title bar.
+	 * Replace with the actual path to your question/challenge image file.
+	 */
+	public static final String DIALOG_ICON_PATH = "images/question_icon.png";
+
 	private final MathQuestion question;
 	private boolean answeredCorrectly = false;
 
@@ -30,10 +38,28 @@ public class MathQuestionDialog extends JDialog
 	{
 		super(parent, "Maths Challenge  \u2013  " + question.getTopic(), true);
 		this.question = question;
+		applyIcon();
 		buildUI();
 		pack();
 		setResizable(false);
 		setLocationRelativeTo(parent);
+	}
+
+	/**
+	 * Set the dialog window icon.
+	 * Replace {@link #DIALOG_ICON_PATH} with your actual image path.
+	 */
+	private void applyIcon()
+	{
+		try
+		{
+			Image icon = new ImageIcon(DIALOG_ICON_PATH).getImage();
+			setIconImage(icon);
+		}
+		catch (Exception e)
+		{
+			// Icon file not present yet – skip silently
+		}
 	}
 
 	private void buildUI()
