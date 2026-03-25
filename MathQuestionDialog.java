@@ -1,13 +1,14 @@
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.Frame;
-import java.awt.Image;
 import java.awt.Window;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 
 import javax.swing.BorderFactory;
-import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
@@ -16,154 +17,183 @@ import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 
 /**
- * Modal dialog that presents a single maths question to the current player and
- * collects their typed answer.
+ * Modal dialog that presents a single maths challenge to the current player
+ * and collects their typed answer.
  *
- * Call the static factory {@link #showQuestion(MathQuestion, java.awt.Component)}
- * which blocks until the player submits an answer, then returns {@code true} if
- * the answer is correct and {@code false} otherwise.
+ * <p>The dialog is created and displayed via the static factory method
+ * {@link #showQuestion(MathQuestion, java.awt.Component)}, which blocks the
+ * calling thread until the player submits an answer and then returns
+ * {@code true} if the answer is correct, or {@code false} otherwise.</p>
+ *
+ * <p>The dialog supports both plain-text and HTML question strings.  Plain
+ * text is automatically wrapped in centred HTML for consistent rendering.</p>
+ *
+ * @author  Tomo
+ * @version 1.0
+ * @see     MathQuestion
+ * @see     MathQuestionBank
+ * @see     GameController
  */
 public class MathQuestionDialog extends JDialog
 {
-	/**
-	 * Path to the icon shown in the dialog title bar.
-	 * Replace with the actual path to your question/challenge image file.
-	 */
-	public static final String DIALOG_ICON_PATH = "images/question_icon.png";
+// ── Fields ────────────────────────────────────────────────────────────
 
-	private final MathQuestion question;
-	private boolean answeredCorrectly = false;
+/** The maths question to display. */
+private final MathQuestion question;
 
-	public MathQuestionDialog(Frame parent, MathQuestion question)
-	{
-		super(parent, "Maths Challenge  \u2013  " + question.getTopic(), true);
-		this.question = question;
-		applyIcon();
-		buildUI();
-		pack();
-		setResizable(false);
-		setLocationRelativeTo(parent);
-	}
+/** Stores the outcome of the player's submission. */
+private boolean answeredCorrectly = false;
 
-	/**
-	 * Set the dialog window icon.
-	 * Replace {@link #DIALOG_ICON_PATH} with your actual image path.
-	 */
-	private void applyIcon()
-	{
-		try
-		{
-			Image icon = new ImageIcon(DIALOG_ICON_PATH).getImage();
-			setIconImage(icon);
-		}
-		catch (Exception e)
-		{
-			// Icon file not present yet – skip silently
-		}
-	}
+// ── Constructor ───────────────────────────────────────────────────────
 
-	private void buildUI()
-	{
-		JPanel root = new JPanel(new BorderLayout(12, 12));
-		root.setBackground(Color.white);
-		root.setBorder(BorderFactory.createEmptyBorder(24, 28, 20, 28));
+/**
+ * Constructs a {@code MathQuestionDialog} as a modal child of the given
+ * parent frame.
+ *
+ * <p>Use the static factory {@link #showQuestion} rather than calling this
+ * constructor directly.</p>
+ *
+ * @param parent   the owning frame (may be {@code null})
+ * @param question the maths question to present
+ */
+public MathQuestionDialog(Frame parent, MathQuestion question)
+{
+super(parent, "Maths Challenge \u2013 " + question.getTopic(), true);
+this.question = question;
+buildUI();
+pack();
+setResizable(false);
+setLocationRelativeTo(parent);
+}
 
-		// ── Topic banner ──────────────────────────────────────────────────
-		JLabel topicLabel = new JLabel(question.getTopic(), JLabel.CENTER);
-		topicLabel.setFont(new Font("Arial", Font.BOLD, 14));
-		topicLabel.setForeground(Color.white);
-		topicLabel.setBackground(new Color(50, 100, 200));
-		topicLabel.setOpaque(true);
-		topicLabel.setBorder(BorderFactory.createEmptyBorder(6, 0, 6, 0));
-		root.add(topicLabel, BorderLayout.NORTH);
+// ── Private UI construction ───────────────────────────────────────────
 
-		// ── Question text ─────────────────────────────────────────────────
-		// questionText may already be an HTML string (from A-Level generators).
-		// Wrap plain text in HTML so multi-line displays are centred.
-		String rawText = question.getQuestionText();
-		String htmlText;
-		if (rawText.trim().toLowerCase().startsWith("<html>"))
-		{
-			htmlText = rawText;
-		}
-		else
-		{
-			htmlText = "<html><center>" + rawText.replace("\n", "<br>") + "</center></html>";
-		}
+/**
+ * Builds and lays out all UI components inside the dialog.
+ *
+ * <p>The layout consists of three regions:</p>
+ * <ul>
+ *   <li><b>North</b>  – a coloured banner showing the question topic.</li>
+ *   <li><b>Centre</b> – the question text (HTML or plain).</li>
+ *   <li><b>South</b>  – an answer input field and submit button.</li>
+ * </ul>
+ */
+private void buildUI()
+{
+JPanel root = new JPanel(new BorderLayout(12, 12));
+root.setBackground(Color.white);
+root.setBorder(BorderFactory.createEmptyBorder(24, 28, 20, 28));
 
-		JLabel questionLabel = new JLabel(htmlText, JLabel.CENTER);
-		questionLabel.setFont(new Font("Arial", Font.PLAIN, 20));
-		questionLabel.setBorder(BorderFactory.createEmptyBorder(16, 0, 16, 0));
-		root.add(questionLabel, BorderLayout.CENTER);
+// ── Topic banner ──────────────────────────────────────────────────
+JLabel topicLabel = new JLabel(question.getTopic(), JLabel.CENTER);
+topicLabel.setFont(new Font("Arial", Font.BOLD, 14));
+topicLabel.setForeground(Color.white);
+topicLabel.setBackground(new Color(50, 100, 200));
+topicLabel.setOpaque(true);
+topicLabel.setBorder(BorderFactory.createEmptyBorder(6, 0, 6, 0));
+root.add(topicLabel, BorderLayout.NORTH);
 
-		// ── Answer input row ──────────────────────────────────────────────
-		JLabel answerPrompt = new JLabel("Your answer:");
-		answerPrompt.setFont(new Font("Arial", Font.PLAIN, 16));
+// ── Question text ─────────────────────────────────────────────────
+// Wrap plain text in HTML so multi-line content is centred correctly.
+String rawText = question.getQuestionText();
+String htmlText;
+if (rawText.trim().toLowerCase().startsWith("<html>"))
+{
+htmlText = rawText;
+}
+else
+{
+htmlText = "<html><center>" + rawText.replace("\n", "<br>") + "</center></html>";
+}
 
-		JTextField answerField = new JTextField(10);
-		answerField.setFont(new Font("Arial", Font.BOLD, 18));
-		answerField.setHorizontalAlignment(JTextField.CENTER);
+JLabel questionLabel = new JLabel(htmlText, JLabel.CENTER);
+questionLabel.setFont(new Font("Arial", Font.PLAIN, 20));
+questionLabel.setBorder(BorderFactory.createEmptyBorder(16, 0, 16, 0));
+root.add(questionLabel, BorderLayout.CENTER);
 
-		JButton submitButton = new JButton("Submit");
-		submitButton.setFont(new Font("Arial", Font.BOLD, 16));
-		submitButton.setBackground(new Color(50, 150, 50));
-		submitButton.setForeground(Color.white);
-		submitButton.setFocusPainted(false);
+// ── Answer input row ──────────────────────────────────────────────
+JLabel answerPrompt = new JLabel("Your answer:");
+answerPrompt.setFont(new Font("Arial", Font.PLAIN, 16));
 
-		JPanel inputRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
-		inputRow.setBackground(Color.white);
-		inputRow.add(answerPrompt);
-		inputRow.add(answerField);
-		inputRow.add(submitButton);
-		root.add(inputRow, BorderLayout.SOUTH);
+JTextField answerField = new JTextField(10);
+answerField.setFont(new Font("Arial", Font.BOLD, 18));
+answerField.setHorizontalAlignment(JTextField.CENTER);
 
-		// ── Submission logic ──────────────────────────────────────────────
-		Runnable submit = () ->
-		{
-			answeredCorrectly = question.checkAnswer(answerField.getText());
-			dispose();
-		};
+JButton submitButton = new JButton("Submit");
+submitButton.setFont(new Font("Arial", Font.BOLD, 16));
+submitButton.setBackground(new Color(50, 150, 50));
+submitButton.setForeground(Color.white);
+submitButton.setFocusPainted(false);
 
-		submitButton.addActionListener(e -> submit.run());
-		answerField.addActionListener(e -> submit.run());
+JPanel inputRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
+inputRow.setBackground(Color.white);
+inputRow.add(answerPrompt);
+inputRow.add(answerField);
+inputRow.add(submitButton);
+root.add(inputRow, BorderLayout.SOUTH);
 
-		// Focus the text field immediately
-		addWindowListener(new java.awt.event.WindowAdapter()
-		{
-			@Override
-			public void windowOpened(java.awt.event.WindowEvent e)
-			{
-				answerField.requestFocusInWindow();
-			}
-		});
+// ── Submission logic ──────────────────────────────────────────────
+Runnable submit = () ->
+{
+answeredCorrectly = question.checkAnswer(answerField.getText());
+dispose();
+};
 
-		add(root);
-		setMinimumSize(new java.awt.Dimension(420, 220));
-	}
+submitButton.addActionListener(e -> submit.run());
+answerField.addActionListener(e -> submit.run());
 
-	/** @return {@code true} if the player typed the correct answer. */
-	public boolean isAnsweredCorrectly()
-	{
-		return answeredCorrectly;
-	}
+// Focus the answer field as soon as the dialog opens
+addWindowListener(new WindowAdapter()
+{
+@Override
+public void windowOpened(WindowEvent e)
+{
+answerField.requestFocusInWindow();
+}
+});
 
-	/**
-	 * Display the question dialog and block until the player submits.
-	 *
-	 * @param question the question to display
-	 * @param parent   any component in the window hierarchy (used to centre the dialog)
-	 * @return {@code true} if the player answered correctly
-	 */
-	public static boolean showQuestion(MathQuestion question, java.awt.Component parent)
-	{
-		Frame frame = null;
-		Window w = SwingUtilities.getWindowAncestor(parent);
-		if (w instanceof Frame)
-		{
-			frame = (Frame) w;
-		}
-		MathQuestionDialog dlg = new MathQuestionDialog(frame, question);
-		dlg.setVisible(true);   // blocks (modal) until dispose() is called
-		return dlg.isAnsweredCorrectly();
-	}
+add(root);
+setMinimumSize(new Dimension(420, 220));
+}
+
+// ── Getter ────────────────────────────────────────────────────────────
+
+/**
+ * Returns {@code true} if the player typed the correct answer.
+ *
+ * @return {@code true} for a correct answer
+ */
+public boolean isAnsweredCorrectly()
+{
+return answeredCorrectly;
+}
+
+// ── Static factory ────────────────────────────────────────────────────
+
+/**
+ * Displays the question dialog modally and blocks until the player submits
+ * an answer.
+ *
+ * <p>The dialog is centred relative to the window containing
+ * {@code parent}.</p>
+ *
+ * @param question the maths question to display
+ * @param parent   any component in the window hierarchy used to locate the
+ *                 parent frame
+ * @return {@code true} if the player answered correctly; {@code false}
+ *         otherwise
+ */
+public static boolean showQuestion(MathQuestion question, java.awt.Component parent)
+{
+Frame frame = null;
+Window window = SwingUtilities.getWindowAncestor(parent);
+if (window instanceof Frame)
+{
+frame = (Frame) window;
+}
+
+MathQuestionDialog dialog = new MathQuestionDialog(frame, question);
+dialog.setVisible(true); // blocks (modal) until dispose() is called
+return dialog.isAnsweredCorrectly();
+}
 }

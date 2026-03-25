@@ -1,338 +1,523 @@
-import java.awt.*;
-import java.awt.geom.*;
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.geom.AffineTransform;
+import java.awt.geom.Path2D;
+import java.awt.geom.Point2D;
+import java.awt.RadialGradientPaint;
 import java.util.ArrayList;
 import java.util.Random;
 
 /**
- * Handles all animation and drawing logic for bomb tiles.
- * Manages fuse burning, spark animation, and explosion effects.
+ * Handles all animation and drawing logic for a {@link BombTile}.
+ *
+ * <p>The engine models two sequential phases:</p>
+ * <ol>
+ *   <li><b>Fuse burn</b> – a spark travels along a quadratic Bézier fuse path
+ *       from its tip toward the bomb body.  Burn progress is tracked as a
+ *       {@code float} in the range {@code 0.0} (fresh fuse) to {@code 1.0}
+ *       (fuse fully burned).  The fuse is designed to last approximately 40
+ *       seconds so it is still visually burning when the 35-second diffuse
+ *       timer in {@link BombDiffuseDialog} expires.  If the player fails to
+ *       diffuse the bomb, {@link #triggerExplosion()} fast-forwards directly
+ *       to the explosion phase.</li>
+ *   <li><b>Explosion</b> – a set of {@link Particle} objects is created and
+ *       updated each tick.  Once all particles have faded, the animation is
+ *       considered complete.</li>
+ * </ol>
+ *
+ * <p>All drawing is performed on a logical 300 × 300 canvas that is scaled to
+ * fit the actual component size.</p>
+ *
+ * @author  Tomo
+ * @version 1.0
+ * @see     BombTile
  */
 public class BombAnimationEngine
 {
-	private float burnProgress = 0.0f; // 0.0 (full fuse) to 1.0 (explodes)
-	private boolean exploded = false;
-	private ArrayList<Particle> particles = new ArrayList<>();
-	private Random rand = new Random();
-	// ~40-second fuse: 1.0 / (40s × 1000ms/s / 16ms per tick) ≈ 0.00040 per tick.
-	// This is intentionally longer than BombDiffuseDialog.COUNTDOWN_SECONDS (35 s)
-	// so the fuse is visually still burning when the dialog timer expires.
-	// If the player fails to diffuse, triggerExplosion() fast-forwards the animation
-	// immediately rather than waiting for the fuse to burn naturally.
-	private static final float BURN_SPEED = 0.00040f;
-	
-	public BombAnimationEngine()
-	{
-		this.particles = new ArrayList<>();
-	}
-	
-	/**
-	 * Update the animation state (call this regularly from the animation timer)
-	 */
-	public void update()
-	{
-		if (!exploded)
-		{
-			burnProgress += BURN_SPEED;
-			if (burnProgress >= 1.0f)
-			{
-				exploded = true;
-				createExplosion();
-			}
-		}
-		else
-		{
-			updateParticles();
-		}
-	}
-	
-	/**
-	 * Create explosion particles when bomb detonates.
-	 * Particles originate from the bomb body centre (150, 205) in logical space.
-	 */
-	private void createExplosion()
-	{
-		for (int i = 0; i < 50; i++)
-		{
-			particles.add(new Particle(150, 205, rand));
-		}
-	}
-	
-	/**
-	 * Update all active explosion particles
-	 */
-	private void updateParticles()
-	{
-		for (Particle p : particles)
-		{
-			p.update();
-		}
-	}
-	
-	/**
-	 * Draw the bomb in pre-explosion state, scaled to fit the component dimensions.
-	 * The bomb body sits in the lower portion of the tile with the fuse running
-	 * upward and to the left so the whole visual is centred in the tile.
-	 */
-	public void drawBomb(Graphics2D g2d, int w, int h)
-	{
-		// Save the graphics state
-		AffineTransform originalTransform = g2d.getTransform();
-		
-		// Scale so the logical 300x300 canvas fits centred inside the component
-		double scale = Math.min(w, h) / 300.0;
-		g2d.translate(w / 2.0 - 150.0 * scale, h / 2.0 - 150.0 * scale);
-		g2d.scale(scale, scale);
-		
-		// 1. Draw the bomb body with radial gradient (centred at (150, 205))
-		RadialGradientPaint bodyGrad = new RadialGradientPaint(
-			new Point2D.Double(130, 185), 70f,
-			new float[]{0f, 1f},
-			new Color[]{new Color(80, 80, 80), Color.BLACK}
-		);
-		g2d.setPaint(bodyGrad);
-		g2d.fillOval(95, 150, 110, 110);
-		
-		// 2. Shine highlight on bomb body
-		g2d.setColor(new Color(255, 255, 255, 60));
-		g2d.fillOval(110, 158, 38, 26);
-		
-		// 3. Draw the fuse casing (small rectangle at the top of the bomb body)
-		g2d.setColor(new Color(40, 40, 40));
-		g2d.fillRoundRect(130, 138, 40, 15, 6, 6);
-		
-		// 4. Draw the fuse rope with proper burn progression
-		drawFuse(g2d);
-		
-		// 5. Draw the spark at the current burn position
-		drawSpark(g2d);
-		
-		// Restore graphics state
-		g2d.setTransform(originalTransform);
-	}
-	
-	/**
-	 * Draw the fuse rope that burns from the tip (top) down toward the bomb.
-	 *
-	 * Fuse path is a quadratic Bezier:
-	 *   P0 = (75,  30)  – free tip (top of fuse, where burning starts)
-	 *   P1 = (80,  85)  – control point
-	 *   P2 = (150, 143) – base where fuse meets the casing on the bomb
-	 *
-	 * The spark starts at P0 and travels to P2 as burnProgress goes 0→1.
-	 */
-	private void drawFuse(Graphics2D g2d)
-	{
-		// Full fuse path: tip (P0) → control (P1) → bomb base (P2)
-		Path2D fusePath = new Path2D.Double();
-		fusePath.moveTo(75, 30);
-		fusePath.quadTo(80, 85, 150, 143);
-		
-		// Draw the complete (unburned) fuse in brown/rope colour
-		g2d.setStroke(new BasicStroke(6, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-		g2d.setColor(new Color(110, 70, 40));
-		g2d.draw(fusePath);
-		
-		// Draw the burned (darkened) portion from the tip to the current spark position
-		if (burnProgress > 0.01f)
-		{
-			Path2D burnedSegment = getBurnedSegment(burnProgress);
-			g2d.setStroke(new BasicStroke(6, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-			g2d.setColor(new Color(30, 30, 30));
-			g2d.draw(burnedSegment);
-		}
-	}
-	
-	/**
-	 * Build a path segment from the fuse tip (t=0) to the spark's current position (t=progress).
-	 * This represents the portion of the fuse that has already burned.
-	 */
-	private Path2D getBurnedSegment(float progress)
-	{
-		Path2D segment = new Path2D.Double();
-		// Start at the fuse tip (P0, t=0)
-		segment.moveTo(75, 30);
-		
-		int steps = Math.max(2, (int)(progress * 100));
-		for (int i = 1; i <= steps; i++)
-		{
-			float t = (float) i / steps * progress;
-			Point2D p = getPointOnCurve(t);
-			segment.lineTo(p.getX(), p.getY());
-		}
-		
-		return segment;
-	}
-	
-	/**
-	 * Draw the spark that follows the fuse as it burns
-	 */
-	private void drawSpark(Graphics2D g2d)
-	{
-		Point2D sparkPos = getPointOnCurve(burnProgress);
-		
-		// Outer glow (orange)
-		g2d.setColor(new Color(255, 100, 0, 180));
-		g2d.fillOval((int)sparkPos.getX() - 10, (int)sparkPos.getY() - 10, 20, 20);
-		
-		// Inner bright spark (yellow)
-		g2d.setColor(Color.YELLOW);
-		g2d.fillOval((int)sparkPos.getX() - 5, (int)sparkPos.getY() - 5, 10, 10);
-	}
-	
-	/**
-	 * Draw the explosion particles after detonation, scaled to fit the component.
-	 */
-	public void drawExplosion(Graphics2D g2d, int w, int h)
-	{
-		AffineTransform originalTransform = g2d.getTransform();
-		
-		// Same scale/translate as drawBomb so particles originate from the bomb centre
-		double scale = Math.min(w, h) / 300.0;
-		g2d.translate(w / 2.0 - 150.0 * scale, h / 2.0 - 150.0 * scale);
-		g2d.scale(scale, scale);
-		
-		for (Particle p : particles)
-		{
-			if (p.isVisible())
-			{
-				g2d.setColor(p.color);
-				g2d.fillOval((int)p.x - p.size / 2, (int)p.y - p.size / 2, p.size, p.size);
-			}
-		}
-		
-		g2d.setTransform(originalTransform);
-	}
-	
-	/**
-	 * Calculate a point on the fuse Bezier curve for parameter t (0.0 → 1.0).
-	 * Uses the quadratic Bezier formula: B(t) = (1-t)²P0 + 2(1-t)t·P1 + t²P2
-	 *
-	 * Control points (in logical 300×300 space):
-	 *   P0 = (75,  30)  – fuse tip (burning starts here at t=0)
-	 *   P1 = (80,  85)  – control point
-	 *   P2 = (150, 143) – fuse base at bomb casing (fully burned at t=1)
-	 */
-	private Point2D getPointOnCurve(float t)
-	{
-		// Ensure t is clamped between 0 and 1
-		t = Math.max(0, Math.min(1, t));
-		
-		double mt   = 1 - t;       // (1-t)
-		double mt2  = mt * mt;     // (1-t)²
-		double t2   = t * t;       // t²
-		double tmt2 = 2 * mt * t;  // 2(1-t)t
-		
-		// P0 = fuse tip, P1 = control, P2 = bomb base
-		double x0 = 75,  y0 = 30;
-		double x1 = 80,  y1 = 85;
-		double x2 = 150, y2 = 143;
-		
-		double x = mt2 * x0 + tmt2 * x1 + t2 * x2;
-		double y = mt2 * y0 + tmt2 * y1 + t2 * y2;
-		
-		return new Point2D.Double(x, y);
-	}
-	
-	/**
-	 * Check if the bomb has exploded
-	 */
-	public boolean hasExploded()
-	{
-		return exploded;
-	}
-	
-	/**
-	 * Check if the full explosion animation (fuse + particles) has finished.
-	 * Returns true once all particles have faded out.
-	 */
-	public boolean isAnimationComplete()
-	{
-		if (!exploded || particles.isEmpty())
-		{
-			return false;
-		}
-		for (Particle p : particles)
-		{
-			if (p.isVisible())
-			{
-				return false;
-			}
-		}
-		return true;
-	}
-	
-	/**
-	 * Get current burn progress (0.0 to 1.0)
-	 */
-	public float getBurnProgress()
-	{
-		return burnProgress;
-	}
-	
-	/**
-	 * Fast-forward to the explosion state immediately.
-	 * Used when the diffuse attempt fails – bypasses the remaining fuse burn.
-	 */
-	public void triggerExplosion()
-	{
-		if (!exploded)
-		{
-			burnProgress = 1.0f;
-			exploded = true;
-			createExplosion();
-		}
-	}
-	
-	/**
-	 * Reset the animation to the beginning
-	 */
-	public void reset()
-	{
-		burnProgress = 0.0f;
-		exploded = false;
-		particles.clear();
-	}
-	
-	/**
-	 * Inner class for explosion particles
-	 */
-	public static class Particle
-	{
-		public double x, y, vx, vy;
-		public int size;
-		public Color color;
-		
-		public Particle(int startX, int startY, Random r)
-		{
-			this.x = startX;
-			this.y = startY;
-			
-			// Random direction and speed
-			double angle = r.nextDouble() * 2 * Math.PI;
-			double speed = r.nextDouble() * 5 + 2;
-			this.vx = Math.cos(angle) * speed;
-			this.vy = Math.sin(angle) * speed;
-			
-			this.size = r.nextInt(10) + 5;
-			this.color = r.nextBoolean() ? Color.ORANGE : Color.RED;
-		}
-		
-		/**
-		 * Update particle position and size
-		 */
-		public void update()
-		{
-			x += vx;
-			y += vy;
-			size = Math.max(0, size - 1);
-		}
-		
-		/**
-		 * Returns true while the particle still has visible area to draw.
-		 */
-		public boolean isVisible()
-		{
-			return size > 0;
-		}
-	}
+// ── Constants ─────────────────────────────────────────────────────────
+
+/**
+ * Burn speed per animation tick (approximately 16 ms).
+ *
+ * <p>At 16 ms per tick there are 40 s &times; 1 000 / 16 = 2 500 ticks in
+ * 40 seconds, so each tick advances burn progress by 1.0 / 2 500 = 0.00040.
+ * This gives a ~40-second fuse, intentionally longer than the 35-second
+ * diffuse countdown so the fuse is still visually alight when time expires.</p>
+ */
+private static final float BURN_SPEED = 0.00040f;
+
+// ── Fields ────────────────────────────────────────────────────────────
+
+/**
+ * Current burn progress along the fuse; ranges from {@code 0.0} (no burn)
+ * to {@code 1.0} (fully burned → explosion).
+ */
+private float burnProgress = 0.0f;
+
+/** {@code true} once the fuse has fully burned and the explosion phase has
+ *  started. */
+private boolean exploded = false;
+
+/** Live explosion particles; populated by {@link #createExplosion()}. */
+private final ArrayList<Particle> particles = new ArrayList<>();
+
+/** Random number generator used when creating explosion particles. */
+private final Random random = new Random();
+
+// ── Constructor ───────────────────────────────────────────────────────
+
+/**
+ * Constructs a new {@code BombAnimationEngine} in its initial (pre-burn)
+ * state.
+ */
+public BombAnimationEngine() {}
+
+// ── Public methods ────────────────────────────────────────────────────
+
+/**
+ * Advances the animation by one tick (~16 ms).
+ *
+ * <p>During the fuse phase the burn progress is incremented.  When it
+ * reaches {@code 1.0} the engine transitions to the explosion phase and
+ * populates the particle list.  During the explosion phase all active
+ * particles are updated.</p>
+ */
+public void update()
+{
+if (!exploded)
+{
+burnProgress += BURN_SPEED;
+if (burnProgress >= 1.0f)
+{
+burnProgress = 1.0f;
+exploded     = true;
+createExplosion();
+}
+}
+else
+{
+updateParticles();
+}
+}
+
+/**
+ * Draws the bomb body, fuse and moving spark onto the supplied
+ * {@link Graphics2D} context.
+ *
+ * <p>The logical 300 × 300 canvas is scaled and translated to fit centred
+ * within the component bounds described by {@code width} and {@code height}.
+ * The original graphics transform is restored before the method returns.</p>
+ *
+ * @param g2d    the graphics context to draw into
+ * @param width  the component width in pixels
+ * @param height the component height in pixels
+ */
+public void drawBomb(Graphics2D g2d, int width, int height)
+{
+AffineTransform saved = g2d.getTransform();
+
+double scale = Math.min(width, height) / 300.0;
+g2d.translate(width  / 2.0 - 150.0 * scale,
+              height / 2.0 - 150.0 * scale);
+g2d.scale(scale, scale);
+g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                     RenderingHints.VALUE_ANTIALIAS_ON);
+
+// 1. Bomb body with radial gradient (centre at (150, 205))
+RadialGradientPaint bodyGradient = new RadialGradientPaint(
+new Point2D.Double(130, 185), 70f,
+new float[]{0f, 1f},
+new Color[]{new Color(80, 80, 80), Color.BLACK}
+);
+g2d.setPaint(bodyGradient);
+g2d.fillOval(95, 150, 110, 110);
+
+// 2. Shine highlight on the bomb body
+g2d.setColor(new Color(255, 255, 255, 60));
+g2d.fillOval(110, 158, 38, 26);
+
+// 3. Fuse casing (small rectangle at the top of the bomb body)
+g2d.setColor(new Color(40, 40, 40));
+g2d.fillRoundRect(130, 138, 40, 15, 6, 6);
+
+// 4. Fuse rope with burn progression
+drawFuse(g2d);
+
+// 5. Moving spark at the current burn position
+drawSpark(g2d);
+
+g2d.setTransform(saved);
+}
+
+/**
+ * Draws the explosion particle field onto the supplied
+ * {@link Graphics2D} context.
+ *
+ * <p>Uses the same scale and translation as {@link #drawBomb} so that
+ * particles originate from the correct position in the component.</p>
+ *
+ * @param g2d    the graphics context to draw into
+ * @param width  the component width in pixels
+ * @param height the component height in pixels
+ */
+public void drawExplosion(Graphics2D g2d, int width, int height)
+{
+AffineTransform saved = g2d.getTransform();
+
+double scale = Math.min(width, height) / 300.0;
+g2d.translate(width  / 2.0 - 150.0 * scale,
+              height / 2.0 - 150.0 * scale);
+g2d.scale(scale, scale);
+
+for (Particle p : particles)
+{
+if (p.isVisible())
+{
+g2d.setColor(p.getColour());
+int px = (int) p.getX() - p.getSize() / 2;
+int py = (int) p.getY() - p.getSize() / 2;
+g2d.fillOval(px, py, p.getSize(), p.getSize());
+}
+}
+
+g2d.setTransform(saved);
+}
+
+/**
+ * Fast-forwards the animation to the explosion phase immediately, bypassing
+ * the remaining fuse burn.
+ *
+ * <p>This is called by {@link BombTile#triggerExplosion()} when the player
+ * fails to diffuse the bomb so the explosion fires without waiting for the
+ * fuse to burn naturally.</p>
+ */
+public void triggerExplosion()
+{
+if (!exploded)
+{
+burnProgress = 1.0f;
+exploded     = true;
+createExplosion();
+}
+}
+
+/**
+ * Resets the engine to its initial (pre-burn) state.
+ *
+ * <p>Called when the animation is stopped before it completes, for example
+ * when the game resets or the bomb is successfully diffused.</p>
+ */
+public void reset()
+{
+burnProgress = 0.0f;
+exploded     = false;
+particles.clear();
+}
+
+// ── Getters ───────────────────────────────────────────────────────────
+
+/**
+ * Returns {@code true} if the fuse has fully burned and the explosion has
+ * started.
+ *
+ * @return {@code true} during and after the explosion phase
+ */
+public boolean hasExploded()
+{
+return exploded;
+}
+
+/**
+ * Returns {@code true} once the entire animation (fuse burn and particle
+ * explosion) has fully finished – i.e. all particles have faded out.
+ *
+ * @return {@code true} when the animation is complete
+ */
+public boolean isAnimationComplete()
+{
+if (!exploded || particles.isEmpty())
+{
+return false;
+}
+for (Particle p : particles)
+{
+if (p.isVisible())
+{
+return false;
+}
+}
+return true;
+}
+
+/**
+ * Returns the current fuse burn progress.
+ *
+ * @return a value in the range {@code 0.0} (unlit) to {@code 1.0} (fully
+ *         burned)
+ */
+public float getBurnProgress()
+{
+return burnProgress;
+}
+
+// ── Private helpers ───────────────────────────────────────────────────
+
+/**
+ * Populates the particle list with 50 randomly directed explosion particles
+ * originating from the bomb body centre (logical co-ordinate (150, 205)).
+ */
+private void createExplosion()
+{
+for (int i = 0; i < 50; i++)
+{
+particles.add(new Particle(150, 205, random));
+}
+}
+
+/**
+ * Advances every particle by one tick.
+ */
+private void updateParticles()
+{
+for (Particle p : particles)
+{
+p.update();
+}
+}
+
+/**
+ * Draws the fuse rope in two segments: the unburned portion (brown) and
+ * the burned portion (dark grey) from the tip to the current spark position.
+ *
+ * <p>Fuse path (quadratic Bézier in logical space):</p>
+ * <ul>
+ *   <li>P0 = (75, 30)   – fuse tip (burning starts here at t = 0)</li>
+ *   <li>P1 = (80, 85)   – control point</li>
+ *   <li>P2 = (150, 143) – base where fuse meets the bomb casing (t = 1)</li>
+ * </ul>
+ *
+ * @param g2d the graphics context (already transformed to logical space)
+ */
+private void drawFuse(Graphics2D g2d)
+{
+// Full fuse path
+Path2D fusePath = new Path2D.Double();
+fusePath.moveTo(75, 30);
+fusePath.quadTo(80, 85, 150, 143);
+
+g2d.setStroke(new BasicStroke(6, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+g2d.setColor(new Color(110, 70, 40));
+g2d.draw(fusePath);
+
+// Burned segment from tip to current spark position
+if (burnProgress > 0.01f)
+{
+Path2D burnedSegment = buildBurnedSegment(burnProgress);
+g2d.setColor(new Color(30, 30, 30));
+g2d.draw(burnedSegment);
+}
+}
+
+/**
+ * Draws the spark (orange glow + yellow core) at the current burn position
+ * along the fuse.
+ *
+ * @param g2d the graphics context (already transformed to logical space)
+ */
+private void drawSpark(Graphics2D g2d)
+{
+Point2D sparkPos = getPointOnCurve(burnProgress);
+int sx = (int) sparkPos.getX();
+int sy = (int) sparkPos.getY();
+
+// Outer orange glow
+g2d.setColor(new Color(255, 100, 0, 180));
+g2d.fillOval(sx - 10, sy - 10, 20, 20);
+
+// Inner bright yellow core
+g2d.setColor(Color.YELLOW);
+g2d.fillOval(sx - 5, sy - 5, 10, 10);
+}
+
+/**
+ * Builds a path segment from the fuse tip (t = 0) to the spark's current
+ * position (t = {@code progress}).  This represents the portion of the fuse
+ * that has already been burned.
+ *
+ * @param progress the burn progress in the range [0, 1]
+ * @return a {@link Path2D} covering the burned portion
+ */
+private Path2D buildBurnedSegment(float progress)
+{
+Path2D segment = new Path2D.Double();
+segment.moveTo(75, 30); // fuse tip
+
+int steps = Math.max(2, (int) (progress * 100));
+for (int i = 1; i <= steps; i++)
+{
+float t = (float) i / steps * progress;
+Point2D pt = getPointOnCurve(t);
+segment.lineTo(pt.getX(), pt.getY());
+}
+
+return segment;
+}
+
+/**
+ * Evaluates the quadratic Bézier fuse path at parameter {@code t}.
+ *
+ * <p>Formula: B(t) = (1−t)²P0 + 2(1−t)t·P1 + t²P2</p>
+ *
+ * <p>Control points (logical 300 × 300 space):</p>
+ * <ul>
+ *   <li>P0 = (75,  30)  – fuse tip</li>
+ *   <li>P1 = (80,  85)  – control point</li>
+ *   <li>P2 = (150, 143) – bomb casing base</li>
+ * </ul>
+ *
+ * @param t the curve parameter clamped to [0, 1]
+ * @return the point on the Bézier curve at {@code t}
+ */
+private Point2D getPointOnCurve(float t)
+{
+t = Math.max(0f, Math.min(1f, t));
+
+double mt   = 1.0 - t;
+double mt2  = mt * mt;
+double t2   = (double) t * t;
+double tmt2 = 2.0 * mt * t;
+
+// Control points
+double x = mt2 * 75 + tmt2 * 80 + t2 * 150;
+double y = mt2 * 30 + tmt2 * 85 + t2 * 143;
+
+return new Point2D.Double(x, y);
+}
+
+// ── Inner class ───────────────────────────────────────────────────────
+
+/**
+ * Represents a single explosion particle.
+ *
+ * <p>Each particle is created at the bomb-body centre, launched in a random
+ * direction at a random speed, and shrinks each tick until it disappears.</p>
+ *
+ * <p>All fields are private; the outer class {@link BombAnimationEngine}
+ * accesses them via the provided getters, demonstrating encapsulation within
+ * a static nested class.</p>
+ */
+public static class Particle
+{
+// ── Fields ────────────────────────────────────────────────────────
+
+/** Current horizontal position in logical space. */
+private double x;
+
+/** Current vertical position in logical space. */
+private double y;
+
+/** Horizontal velocity component (pixels per tick). */
+private final double velocityX;
+
+/** Vertical velocity component (pixels per tick). */
+private final double velocityY;
+
+/** Remaining visible size of the particle in pixels; shrinks each tick. */
+private int size;
+
+/** Render colour of this particle (orange or red). */
+private final Color colour;
+
+// ── Constructor ───────────────────────────────────────────────────
+
+/**
+ * Creates a particle originating at ({@code startX}, {@code startY})
+ * with a random direction, speed, size and colour.
+ *
+ * @param startX the starting x co-ordinate in logical space
+ * @param startY the starting y co-ordinate in logical space
+ * @param random the {@link Random} instance used for randomisation
+ */
+public Particle(int startX, int startY, Random random)
+{
+this.x = startX;
+this.y = startY;
+
+double angle = random.nextDouble() * 2 * Math.PI;
+double speed = random.nextDouble() * 5 + 2;
+this.velocityX = Math.cos(angle) * speed;
+this.velocityY = Math.sin(angle) * speed;
+
+this.size   = random.nextInt(10) + 5;
+this.colour = random.nextBoolean() ? Color.ORANGE : Color.RED;
+}
+
+// ── Methods ───────────────────────────────────────────────────────
+
+/**
+ * Moves the particle by its velocity and decrements its size by one.
+ * Once size reaches zero the particle is no longer drawn.
+ */
+public void update()
+{
+x    += velocityX;
+y    += velocityY;
+size  = Math.max(0, size - 1);
+}
+
+/**
+ * Returns {@code true} while the particle still has a visible area
+ * to draw.
+ *
+ * @return {@code true} if the particle size is greater than zero
+ */
+public boolean isVisible()
+{
+return size > 0;
+}
+
+// ── Getters ───────────────────────────────────────────────────────
+
+/**
+ * Returns the current horizontal position in logical space.
+ *
+ * @return the x co-ordinate
+ */
+public double getX()
+{
+return x;
+}
+
+/**
+ * Returns the current vertical position in logical space.
+ *
+ * @return the y co-ordinate
+ */
+public double getY()
+{
+return y;
+}
+
+/**
+ * Returns the remaining visible size of the particle.
+ *
+ * @return the diameter in pixels
+ */
+public int getSize()
+{
+return size;
+}
+
+/**
+ * Returns the render colour of this particle.
+ *
+ * @return the particle colour (orange or red)
+ */
+public Color getColour()
+{
+return colour;
+}
+}
 }

@@ -1,42 +1,103 @@
 import java.util.Random;
 
 /**
- * Generates randomised maths questions for the requested difficulty level.
+ * Generates randomised maths questions appropriate to the chosen difficulty
+ * level.
  *
- * GCSE topics  : linear equations, percentages, geometry (area), statistics
- *                (mean), powers/indices, substitution, speed-distance-time.
+ * <h3>GCSE standard topics</h3>
+ * <ul>
+ *   <li>Linear equations</li>
+ *   <li>Percentages</li>
+ *   <li>Geometry (area of rectangles and triangles)</li>
+ *   <li>Statistics (mean)</li>
+ *   <li>Powers and indices</li>
+ *   <li>Algebraic substitution</li>
+ *   <li>Speed, distance and time</li>
+ * </ul>
  *
- * GCSE harder  : quadratic equations, Pythagoras, simultaneous equations,
- *                nth-term sequences.
+ * <h3>GCSE harder topics (bomb-diffuse challenges)</h3>
+ * <ul>
+ *   <li>Quadratic equations</li>
+ *   <li>Pythagoras' theorem</li>
+ *   <li>Simultaneous equations</li>
+ *   <li>nth-term sequences</li>
+ * </ul>
  *
- * A-Level topics: differentiation (power rule), second derivatives, stationary
- *                 points, definite integration, logarithms, binomial
- *                 coefficients, inverse-trig angles.
+ * <h3>A-Level standard topics</h3>
+ * <ul>
+ *   <li>Differentiation (power rule)</li>
+ *   <li>Second derivatives</li>
+ *   <li>Stationary points</li>
+ *   <li>Definite integration</li>
+ *   <li>Logarithms</li>
+ *   <li>Binomial coefficients</li>
+ *   <li>Inverse-trig angles</li>
+ * </ul>
  *
- * A-Level harder: geometric series sum, chain-rule evaluation, harder definite
- *                 integrals.
+ * <h3>A-Level harder topics (bomb-diffuse challenges)</h3>
+ * <ul>
+ *   <li>Geometric series sum</li>
+ *   <li>Chain-rule differentiation</li>
+ *   <li>Harder definite integrals</li>
+ * </ul>
  *
- * All questions are designed so the correct answer is an integer (or a simple
- * plain string) – this keeps on-screen rendering and answer checking
- * straightforward.
+ * <p>All questions are designed so the correct answer is an integer (or a
+ * short plain string) to keep on-screen rendering and answer-checking
+ * straightforward.</p>
+ *
+ * @author  Tomo
+ * @version 1.0
+ * @see     MathQuestion
+ * @see     MathDifficulty
  */
 public class MathQuestionBank
 {
-	private final MathDifficulty difficulty;
-	private final Random random;
+	// ── Constants ─────────────────────────────────────────────────────────
 
+	/** Number of distinct GCSE standard question types. */
 	private static final int GCSE_TYPES        = 7;
+
+	/** Number of distinct harder GCSE question types (bomb-diffuse). */
 	private static final int GCSE_HARD_TYPES   = 4;
+
+	/** Number of distinct A-Level standard question types. */
 	private static final int ALEVEL_TYPES      = 7;
+
+	/** Number of distinct harder A-Level question types (bomb-diffuse). */
 	private static final int ALEVEL_HARD_TYPES = 3;
 
+	// ── Fields ────────────────────────────────────────────────────────────
+
+	/** The difficulty level selected at the start of the game. */
+	private final MathDifficulty difficulty;
+
+	/** Random number generator used by all question generators. */
+	private final Random random;
+
+	// ── Constructor ───────────────────────────────────────────────────────
+
+	/**
+	 * Constructs a {@code MathQuestionBank} configured for the given difficulty.
+	 *
+	 * @param difficulty the difficulty level for this game session
+	 */
 	public MathQuestionBank(MathDifficulty difficulty)
 	{
 		this.difficulty = difficulty;
 		this.random     = new Random();
 	}
 
-	/** Return one freshly generated question appropriate to the stored difficulty. */
+	// ── Public methods ────────────────────────────────────────────────────
+
+	/**
+	 * Returns a freshly generated question appropriate to the stored
+	 * difficulty level.
+	 *
+	 * <p>GCSE games receive a standard GCSE question; A-Level games receive a
+	 * standard A-Level question.</p>
+	 *
+	 * @return a randomly generated {@link MathQuestion}
+	 */
 	public MathQuestion getRandomQuestion()
 	{
 		if (difficulty == MathDifficulty.GCSE)
@@ -50,9 +111,12 @@ public class MathQuestionBank
 	}
 
 	/**
-	 * Return a harder question used for bomb-diffuse challenges.
-	 * If the game was set to GCSE, the challenge is a harder GCSE question.
-	 * If the game was set to A-Level, the challenge is a harder A-Level question.
+	 * Returns a harder question used for bomb-diffuse challenges.
+	 *
+	 * <p>GCSE games receive a harder GCSE question; A-Level games receive a
+	 * harder A-Level question.</p>
+	 *
+	 * @return a randomly generated harder {@link MathQuestion}
 	 */
 	public MathQuestion getHardQuestion()
 	{
