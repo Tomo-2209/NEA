@@ -124,13 +124,13 @@ public class GamePanel extends JPanel
 			{
 				return;
 			}
-			SoundManager.getInstance().playTileClick();
+			SoundManager.getInstance().playTileClick(controller.getCurrentPlayer().getSymbol());
 			bomb.onClick();
 			controller.handleBombClick(bomb.getRow(), bomb.getCol());
 		}
 		else if (tile instanceof StandardTile)
 		{
-			SoundManager.getInstance().playTileClick();
+			SoundManager.getInstance().playTileClick(controller.getCurrentPlayer().getSymbol());
 			StandardTile standard = (StandardTile) tile;
 			controller.handleTileClick(standard.getRow(), standard.getCol());
 		}

@@ -251,6 +251,12 @@ public class GameController
 	{
 		return playerO;
 	}
+
+	/** Return the player whose turn it currently is. */
+	public Player getCurrentPlayer()
+	{
+		return currentPlayer;
+	}
 	
 	public void resetGame()
 	{

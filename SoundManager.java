@@ -20,7 +20,10 @@ import java.io.IOException;
 public class SoundManager
 {
 	// ── Sound file paths – replace with actual .wav paths ────────────────
-	public static final String TILE_CLICK_PATH    = "sounds/tile_click.wav";
+	/** Tile-click sound for Player 1 (X). Replace with your actual .wav path. */
+	public static final String TILE_CLICK_PLAYER1_PATH = "sounds/tile_click_player1.wav";
+	/** Tile-click sound for Player 2 (O). Replace with your actual .wav path. */
+	public static final String TILE_CLICK_PLAYER2_PATH = "sounds/tile_click_player2.wav";
 	public static final String BOMB_EXPLODE_PATH  = "sounds/bomb_explode.wav";
 	public static final String BOMB_TICK_PATH     = "sounds/bomb_tick.wav";
 	public static final String GAME_WON_PATH      = "sounds/game_won.wav";
@@ -44,8 +47,23 @@ public class SoundManager
 
 	// ── Convenience play methods ──────────────────────────────────────────
 
-	/** Play the tile-click sound effect. */
-	public void playTileClick()    { playSound(TILE_CLICK_PATH);    }
+	/**
+	 * Play the tile-click sound for the given player.
+	 * Player 1 ("X") plays {@link #TILE_CLICK_PLAYER1_PATH};
+	 * Player 2 ("O") plays {@link #TILE_CLICK_PLAYER2_PATH}.
+	 * Any symbol other than "X" is treated as Player 2.
+	 */
+	public void playTileClick(String playerSymbol)
+	{
+		if ("X".equals(playerSymbol))
+		{
+			playSound(TILE_CLICK_PLAYER1_PATH);
+		}
+		else // "O" and any other symbol → Player 2 sound
+		{
+			playSound(TILE_CLICK_PLAYER2_PATH);
+		}
+	}
 
 	/** Play the bomb-explosion sound effect. */
 	public void playBombExplode()  { playSound(BOMB_EXPLODE_PATH);  }

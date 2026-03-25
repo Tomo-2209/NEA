@@ -43,21 +43,23 @@ public class TicTacToeUI
 			"Select the difficulty level for maths questions:",
 			"Tic-Tac-Total \u2013 Difficulty",
 			JOptionPane.DEFAULT_OPTION,
-			JOptionPane.QUESTION_MESSAGE,
-			loadDialogIcon(),
+			JOptionPane.PLAIN_MESSAGE,
+			null,
 			options,
 			options[0]);
 
 		MathDifficulty difficulty = (choice == 1) ? MathDifficulty.A_LEVEL : MathDifficulty.GCSE;
 
 		// ── 2. Player names ───────────────────────────────────────────────
-		String player1Name = JOptionPane.showInputDialog(frame, "Enter name for Player 1 (X):");
+		String player1Name = JOptionPane.showInputDialog(
+			frame, "Enter name for Player 1 (X):", "Player 1 Name", JOptionPane.PLAIN_MESSAGE);
 		if (player1Name == null || player1Name.isEmpty())
 		{
 			player1Name = "Player 1";
 		}
 		
-		String player2Name = JOptionPane.showInputDialog(frame, "Enter name for Player 2 (O):");
+		String player2Name = JOptionPane.showInputDialog(
+			frame, "Enter name for Player 2 (O):", "Player 2 Name", JOptionPane.PLAIN_MESSAGE);
 		if (player2Name == null || player2Name.isEmpty())
 		{
 			player2Name = "Player 2";
@@ -128,24 +130,6 @@ public class TicTacToeUI
 		}
 	}
 
-	/**
-	 * Load the icon used in the JOptionPane input dialogs.
-	 * Returns {@code null} if the file is not yet present (the dialog
-	 * then uses the default Swing icon).
-	 * Replace {@link #FRAME_ICON_PATH} with your actual icon path.
-	 */
-	private ImageIcon loadDialogIcon()
-	{
-		try
-		{
-			return new ImageIcon(FRAME_ICON_PATH);
-		}
-		catch (Exception e)
-		{
-			return null;
-		}
-	}
-         
 	public void updateTurnLabel(String message)
 	{
 		textLabel.setText(message);
