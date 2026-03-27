@@ -56,7 +56,7 @@ private int wrongAnswers;
  */
 public Player(String name, String symbol)
 {
-this.name           = (name == null || name.isBlank()) ? "Player " + symbol : name;
+this.name           = (name == null || name.trim().isEmpty()) ? "Player " + symbol : name;
 this.symbol         = symbol;
 this.score          = 0;
 this.winStreak      = 0;

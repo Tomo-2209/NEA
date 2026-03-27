@@ -119,7 +119,7 @@ frame,
 "Enter name for Player 1 (X):",
 "Player 1 Name",
 JOptionPane.PLAIN_MESSAGE);
-if (player1Name == null || player1Name.isBlank())
+if (player1Name == null || player1Name.trim().isEmpty())
 {
 player1Name = "Player 1";
 }
@@ -129,7 +129,7 @@ frame,
 "Enter name for Player 2 (O):",
 "Player 2 Name",
 JOptionPane.PLAIN_MESSAGE);
-if (player2Name == null || player2Name.isBlank())
+if (player2Name == null || player2Name.trim().isEmpty())
 {
 player2Name = "Player 2";
 }
