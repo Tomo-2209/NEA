@@ -22,15 +22,23 @@ Player scores, win streaks, and answer counts are held in memory only and are lo
 
 ---
 
-## 4. Fixed question bank with possible repetition
+## 4. Fixed set of question templates (with randomised parameters)
 
-Each question is randomly selected from a pre-written bank (7 standard questions and 4 bomb questions per difficulty level). It is therefore possible for the same question to appear more than once in a single session. A fully generative question engine — one that creates unique questions on the fly — would significantly increase complexity. For the purposes of this project, the fixed bank is considered sufficient to demonstrate the intended learning mechanic.
+The question generator uses a fixed set of question *types* — seven standard types and four harder bomb-diffuse types at GCSE level, and seven standard types and three harder types at A-Level. When a question is needed, one of these types is picked at random and its numerical parameters (coefficients, dimensions, percentages, etc.) are generated randomly at that moment, so the specific numbers change every time. However, the underlying *topic and structure* of the question always falls into one of those pre-defined categories.
+
+This means the game cannot, for example, surprise an experienced player with a topic they have never seen before; it will always cycle through the same set of question styles (solve a linear equation, find a percentage, differentiate a power, and so on). A system that could dynamically introduce entirely new question formats or topics would require a much more sophisticated question-generation engine or an external curriculum data source. For the purposes of this project, the fixed template set provides a wide enough variety of question styles to support meaningful maths revision at both levels.
+
+There is also a possibility of encountering similar-looking questions within the same session — for instance, two percentage questions in a row — since each question is selected independently at random from the available types. Tracking recently used types and actively avoiding repetition would add complexity for limited benefit, so this has not been implemented.
 
 ---
 
-## 5. Answers must be integers or short numeric strings
+## 5. Answers must be typed as integers or short plain strings
 
-All maths answers are expected as whole numbers or brief strings. This avoids the need for algebraic expression parsing, fraction simplification, or floating-point tolerance checking, which would require a computer-algebra system. It is an acceptable simplification because questions are carefully designed to always produce clean integer answers.
+The answer-checking logic works by taking whatever the player types into the text box, trimming any surrounding whitespace, converting it to lower case, and then comparing it character-for-character against a list of pre-approved answer strings stored in the question. This is deliberately simple: it avoids any need for mathematical expression parsing.
+
+This means the system cannot accept answers in alternative but equivalent forms unless those forms are explicitly listed when the question is created. For example, if the correct answer to a question is `6`, the player must type `6`; typing `6.0` or `+6` would be marked wrong. For the few questions where a fraction or decimal might be a natural way to express the answer (for instance, "one half"), both `0.5` and `1/2` can be listed as valid answers — but only if the question author remembered to add them. The system has no ability to recognise mathematical equivalence on its own.
+
+All questions in the bank are deliberately designed so the correct answer is always a clean integer or a short unambiguous string (such as a topic keyword or a simple numerical result). This design choice makes the answer-checking reliable and removes any risk of a correct answer being marked wrong due to floating-point rounding or different but equivalent algebraic expressions. The trade-off is that question types requiring non-integer answers — such as surds, exact fractions in unsimplified form, or algebraic expressions like `2x + 3` — cannot be used without extending the validation logic.
 
 ---
 
